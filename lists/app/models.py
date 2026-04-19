@@ -236,3 +236,128 @@ class BacklinkEntry(BaseModel):
     title: str
     snippet: str
     link_type: str
+
+
+# ── Boards ────────────────────────────────────────────────────────────────────
+
+
+class BoardCreate(BaseModel):
+    name: str
+    folder_id: int | None = None
+    icon: str = "🧩"
+    color: str = ""
+    pinned: bool = False
+    sort_order: int = 0
+
+
+class BoardUpdate(BaseModel):
+    name: str | None = None
+    folder_id: int | None = None
+    icon: str | None = None
+    color: str | None = None
+    pinned: bool | None = None
+    archived: bool | None = None
+    sort_order: int | None = None
+
+
+class Board(BaseModel):
+    id: int
+    folder_id: int | None
+    name: str
+    icon: str
+    color: str
+    pinned: bool
+    archived: bool
+    sort_order: int
+    viewport: dict
+    created_at: str
+    updated_at: str
+
+
+class ViewportUpdate(BaseModel):
+    x: float = 0
+    y: float = 0
+    zoom: float = 1
+
+
+NodeKind = Literal["list", "note", "card"]
+
+
+class BoardNodeCreate(BaseModel):
+    kind: NodeKind
+    ref_id: int | None = None
+    title: str = ""
+    body: str = ""
+    color: str = ""
+    x: float = 0
+    y: float = 0
+    width: float = 240
+    height: float = 160
+    z: int = 0
+
+
+class BoardNodeUpdate(BaseModel):
+    title: str | None = None
+    body: str | None = None
+    color: str | None = None
+    x: float | None = None
+    y: float | None = None
+    width: float | None = None
+    height: float | None = None
+    z: int | None = None
+
+
+class BoardNode(BaseModel):
+    id: int
+    board_id: int
+    kind: NodeKind
+    ref_id: int | None
+    title: str
+    body: str
+    color: str
+    x: float
+    y: float
+    width: float
+    height: float
+    z: int
+    ref_summary: dict | None = None
+    created_at: str
+    updated_at: str
+
+
+class BoardNodeBulkPositionEntry(BaseModel):
+    id: int
+    x: float
+    y: float
+
+
+class BoardNodeBulkPositions(BaseModel):
+    positions: list[BoardNodeBulkPositionEntry]
+
+
+class BoardEdgeCreate(BaseModel):
+    source_node_id: int
+    target_node_id: int
+    label: str = ""
+    style: str = "default"
+
+
+class BoardEdgeUpdate(BaseModel):
+    label: str | None = None
+    style: str | None = None
+
+
+class BoardEdge(BaseModel):
+    id: int
+    board_id: int
+    source_node_id: int
+    target_node_id: int
+    label: str
+    style: str
+    created_at: str
+
+
+class BoardDetail(BaseModel):
+    board: Board
+    nodes: list[BoardNode]
+    edges: list[BoardEdge]

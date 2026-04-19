@@ -94,3 +94,32 @@ export const aiNoteExtractTasks = (noteId, targetListId) =>
   api.post('/ai/notes/extract-tasks', { note_id: noteId, target_list_id: targetListId }).then(r => r.data);
 export const aiNoteOutline      = (noteId) =>
   api.post('/ai/notes/outline', { note_id: noteId }).then(r => r.data);
+
+// ── Boards ─────────────────────────────────────────────────────────────────
+export const listBoards = (params = {}) =>
+  api.get('/boards/', { params }).then(r => r.data);
+export const getBoard = (id) => api.get(`/boards/${id}`).then(r => r.data);
+export const createBoard = (payload) => api.post('/boards/', payload).then(r => r.data);
+export const updateBoard = (id, patch) => api.patch(`/boards/${id}`, patch).then(r => r.data);
+export const deleteBoard = (id) => api.delete(`/boards/${id}`);
+export const duplicateBoard = (id) => api.post(`/boards/${id}/duplicate`).then(r => r.data);
+export const updateBoardViewport = (id, viewport) =>
+  api.patch(`/boards/${id}/viewport`, viewport).then(r => r.data);
+
+// ── Board nodes ────────────────────────────────────────────────────────────
+export const createBoardNode = (boardId, payload) =>
+  api.post(`/boards/${boardId}/nodes/`, payload).then(r => r.data);
+export const updateBoardNode = (boardId, nodeId, patch) =>
+  api.patch(`/boards/${boardId}/nodes/${nodeId}`, patch).then(r => r.data);
+export const deleteBoardNode = (boardId, nodeId) =>
+  api.delete(`/boards/${boardId}/nodes/${nodeId}`);
+export const bulkUpdateBoardNodePositions = (boardId, positions) =>
+  api.post(`/boards/${boardId}/nodes/bulk-positions`, { positions }).then(r => r.data);
+
+// ── Board edges ────────────────────────────────────────────────────────────
+export const createBoardEdge = (boardId, payload) =>
+  api.post(`/boards/${boardId}/edges/`, payload).then(r => r.data);
+export const updateBoardEdge = (boardId, edgeId, patch) =>
+  api.patch(`/boards/${boardId}/edges/${edgeId}`, patch).then(r => r.data);
+export const deleteBoardEdge = (boardId, edgeId) =>
+  api.delete(`/boards/${boardId}/edges/${edgeId}`);
