@@ -1,0 +1,31 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Lists nginx – Reverse proxy for the React SPA + API
+# ==============================================================================
+
+bashio::log.info "Starting Lists nginx..."
+
+if bashio::config.true 'debug'; then
+    export NGINX_LOG_ROUTINE=1
+else
+    export NGINX_LOG_ROUTINE=0
+fi
+
+envsubst '${NGINX_LOG_ROUTINE}' \
+    < /etc/nginx/nginx.conf.template \
+    > /etc/nginx/nginx.conf
+
+bashio::log.info "Waiting for Lists API..."
+for i in $(seq 1 30); do
+    if curl -sf http://127.0.0.1:8100/api/health > /dev/null 2>&1; then
+        bashio::log.info "Lists API ready (attempt ${i})"
+        break
+    fi
+    if [ "${i}" -eq 30 ]; then
+        bashio::log.warning "Lists API not ready after 30 attempts, starting nginx anyway"
+    fi
+    sleep 2
+done
+
+exec nginx -g "daemon off;"
