@@ -5,12 +5,12 @@ import { createPortal } from 'react-dom'
  * PC-style context menu rendered via portal.
  *
  * Props:
- *   open, x, y, onClose, items
+ *   open, x, y, onClose, items, onLeave?
  * Items: { label, icon?, onClick?, danger?, disabled?, separator?, children?, hint? }
  *   - separator: { separator: true }
  *   - children: nested item array → rendered as a submenu (hover or ▸ click)
  */
-export default function ContextMenu({ open, x, y, items, onClose, _depth = 0 }) {
+export default function ContextMenu({ open, x, y, items, onClose, onLeave, _depth = 0 }) {
   const ref = useRef(null)
   const [pos, setPos] = useState({ x, y })
 
@@ -27,7 +27,9 @@ export default function ContextMenu({ open, x, y, items, onClose, _depth = 0 }) 
   useEffect(() => {
     if (!open) return
     const onDocDown = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose()
+      // Allow clicks anywhere inside any context menu (including portaled submenus)
+      if (e.target.closest?.('[data-ctx-menu]')) return
+      onClose()
     }
     const onKey = (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); onClose() }
@@ -45,10 +47,15 @@ export default function ContextMenu({ open, x, y, items, onClose, _depth = 0 }) 
   return createPortal(
     <div
       ref={ref}
+      data-ctx-menu="true"
       role="menu"
       className="fixed z-[100] min-w-[200px] py-1 rounded-md bg-surface-3 border border-line-1 shadow-xl animate-slide-up text-sm"
       style={{ left: pos.x, top: pos.y }}
       onContextMenu={(e) => e.preventDefault()}
+      onMouseLeave={(e) => {
+        // When mouse leaves this menu to a non-CM target, notify parent so it can hide us
+        if (!e.relatedTarget?.closest?.('[data-ctx-menu]')) onLeave?.()
+      }}
     >
       {items.map((it, i) => (
         <MenuItem key={i} item={it} onClose={onClose} />
@@ -83,7 +90,9 @@ function MenuItem({ item, onClose }) {
     setHover(true)
   }
 
-  function leave() {
+  function leave(e) {
+    // If mouse moves to any context menu element (e.g. our submenu portal), keep hover
+    if (e.relatedTarget?.closest?.('[data-ctx-menu]')) return
     setHover(false)
   }
 
@@ -114,9 +123,11 @@ function MenuItem({ item, onClose }) {
           y={subPos.y}
           items={item.children}
           onClose={onClose}
+          onLeave={() => setHover(false)}
           _depth={1}
         />
       )}
     </div>
   )
 }
+
