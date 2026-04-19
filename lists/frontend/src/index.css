@@ -1,3 +1,4 @@
+@import './styles/design-tokens.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,3 +6,57 @@
 html, body, #root {
   height: 100%;
 }
+
+body {
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Spiciness slider — orange→gold gradient track ───────────────────────── */
+input[type="range"].spice {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand-orange), #FBBF24);
+  outline: none;
+}
+input[type="range"].spice::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--brand-orange);
+  border: 2px solid var(--fg-1);
+  box-shadow: var(--glow-orange);
+  cursor: pointer;
+}
+input[type="range"].spice::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--brand-orange);
+  border: 2px solid var(--fg-1);
+  box-shadow: var(--glow-orange);
+  cursor: pointer;
+}
+
+/* ── AI job toast — animated shimmer on running ──────────────────────────── */
+@keyframes ai-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.ai-running::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,122,61,0.15) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: ai-shimmer 2s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-slide-up { animation: slide-up 0.3s var(--ease-out); }
