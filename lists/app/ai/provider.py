@@ -28,7 +28,7 @@ _PROVIDER_TIMEOUT = 120.0
 
 def _call_gemini(prompt: str, api_key: str, model: str) -> tuple[str, dict]:
     if not api_key:
-        raise RuntimeError("Gemini API key not configured in Storage")
+        raise RuntimeError("Gemini API key not configured (set ai_gemini_api_key in add-on options)")
     url = f"{_GEMINI_BASE_URL}{model}:generateContent"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -50,7 +50,7 @@ def _call_gemini(prompt: str, api_key: str, model: str) -> tuple[str, dict]:
 
 def _call_ollama(prompt: str, url: str, model: str) -> tuple[str, dict]:
     if not url:
-        raise RuntimeError("Ollama URL not configured in Storage")
+        raise RuntimeError("Ollama URL not configured (set ai_ollama_url in add-on options)")
     with httpx.Client(timeout=_PROVIDER_TIMEOUT) as client:
         resp = client.post(
             f"{url.rstrip('/')}/api/chat",
@@ -71,7 +71,7 @@ def _call_ollama(prompt: str, url: str, model: str) -> tuple[str, dict]:
 
 def _call_claude(prompt: str, api_key: str, model: str) -> tuple[str, dict]:
     if not api_key:
-        raise RuntimeError("Claude API key not configured in Storage")
+        raise RuntimeError("Claude API key not configured (set ai_claude_api_key in add-on options)")
     try:
         import anthropic as _anthropic
     except ImportError as exc:
