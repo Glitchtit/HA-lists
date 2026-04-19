@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import NotePreview from '../../notes/NotePreview';
 
@@ -10,6 +10,20 @@ const PRESET_COLORS = [
   { name: 'rose',   value: 'var(--danger)' },
   { name: 'purple', value: '#7C3AED' },
 ];
+
+function toggleChecklistAt(body, offset) {
+  if (typeof offset !== 'number' || offset < 0 || offset >= body.length) return body;
+  const lineStart = body.lastIndexOf('\n', offset) + 1;
+  const lineEnd = body.indexOf('\n', offset);
+  const end = lineEnd === -1 ? body.length : lineEnd;
+  const line = body.slice(lineStart, end);
+  const m = /\[( |x|X)\]/.exec(line);
+  if (!m) return body;
+  const absIdx = lineStart + m.index;
+  const current = body[absIdx + 1];
+  const replacement = current === ' ' ? 'x' : ' ';
+  return body.slice(0, absIdx + 1) + replacement + body.slice(absIdx + 2);
+}
 
 function tintForColor(color) {
   // Semi-transparent card background derived from the dot colour.
@@ -49,6 +63,17 @@ function CardNode({ data, selected, id }) {
     setEditing(false);
     if (body !== (data?.body || '')) save({ body });
   };
+
+  const handleToggleChecklist = useCallback((offset) => {
+    setBody((prev) => {
+      const next = toggleChecklistAt(prev, offset);
+      if (next !== prev) {
+        // Save immediately — no blur needed for checkbox clicks.
+        if (data?.onUpdate) data.onUpdate({ body: next });
+      }
+      return next;
+    });
+  }, [data]);
 
   const handleBodyKey = (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -121,7 +146,7 @@ function CardNode({ data, selected, id }) {
           />
         ) : (
           <div className="bn-note-body nowheel">
-            <NotePreview body={body || '*Double-click to edit*'} />
+            <NotePreview body={body || '*Double-click to edit*'} onToggleChecklist={handleToggleChecklist} />
           </div>
         )}
       </div>
