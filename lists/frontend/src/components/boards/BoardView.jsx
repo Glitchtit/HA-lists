@@ -264,12 +264,15 @@ function BoardCanvas({ boardId, onOpenEntity }) {
     return rf.project({ x: clientX - rect.left, y: clientY - rect.top });
   }, [rf, viewportCenter]);
 
-  const insertNode = useCallback(async (payload) => {
+  const insertNode = useCallback(async (payload, refSummary = null) => {
     try {
       const created = await createBoardNode(boardId, payload);
       const fn = toFlowNode(created, {});
       fn.data = {
         ...fn.data,
+        // Optimistically supply ref_summary from the known item so the node
+        // doesn't flash as "deleted" before the next full board reload.
+        ref_summary: refSummary ?? fn.data.ref_summary ?? null,
         onOpenEntity,
         onUpdate: (patch) => handleNodeUpdate(created.id, patch),
         onDelete: () => handleNodeDelete(created.id),
@@ -288,12 +291,26 @@ function BoardCanvas({ boardId, onOpenEntity }) {
 
   const onAddList = useCallback((item) => {
     const { x, y } = viewportCenter();
-    insertNode({ kind: 'list', ref_id: item.id, x, y });
+    const refSummary = {
+      id: item.id,
+      name: item.name || 'Untitled list',
+      icon: item.icon || '📋',
+      color: item.color || '',
+      item_count: item.item_count ?? 0,
+      completed_count: item.completed_count ?? 0,
+    };
+    insertNode({ kind: 'list', ref_id: item.id, x, y }, refSummary);
   }, [insertNode, viewportCenter]);
 
   const onAddNote = useCallback((item) => {
     const { x, y } = viewportCenter();
-    insertNode({ kind: 'note', ref_id: item.id, x, y });
+    const refSummary = {
+      id: item.id,
+      title: item.title || 'Untitled note',
+      icon: item.icon || '📝',
+      body_preview: (item.body || '').slice(0, 400),
+    };
+    insertNode({ kind: 'note', ref_id: item.id, x, y }, refSummary);
   }, [insertNode, viewportCenter]);
 
   // ─ Drag & drop: toolbar / sidebar → canvas ───────────────
@@ -335,9 +352,23 @@ function BoardCanvas({ boardId, onOpenEntity }) {
     if (payload.kind === 'card') {
       insertNode({ kind: 'card', x: pos.x, y: pos.y, title: payload.item?.title || 'New card', body: payload.item?.body || '' });
     } else if (payload.kind === 'list' && payload.item?.id) {
-      insertNode({ kind: 'list', ref_id: payload.item.id, x: pos.x, y: pos.y });
+      const refSummary = {
+        id: payload.item.id,
+        name: payload.item.name || 'Untitled list',
+        icon: payload.item.icon || '📋',
+        color: payload.item.color || '',
+        item_count: payload.item.item_count ?? 0,
+        completed_count: payload.item.completed_count ?? 0,
+      };
+      insertNode({ kind: 'list', ref_id: payload.item.id, x: pos.x, y: pos.y }, refSummary);
     } else if (payload.kind === 'note' && payload.item?.id) {
-      insertNode({ kind: 'note', ref_id: payload.item.id, x: pos.x, y: pos.y });
+      const refSummary = {
+        id: payload.item.id,
+        title: payload.item.title || 'Untitled note',
+        icon: payload.item.icon || '📝',
+        body_preview: (payload.item.body || '').slice(0, 400),
+      };
+      insertNode({ kind: 'note', ref_id: payload.item.id, x: pos.x, y: pos.y }, refSummary);
     }
   }, [insertNode, projectClient]);
 

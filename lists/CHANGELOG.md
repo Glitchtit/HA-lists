@@ -1,3 +1,8 @@
+## 0.8.3
+
+- Boards: fix newly-added list/note nodes showing "deleted" immediately — POST response has no ref_summary so the optimistic node now carries the known item data as ref_summary
+- Boards: tighten tombstone detection to only fire when ref_id is set but ref_summary is absent (genuine deletion), not simply missing on fresh nodes
+
 ## 0.8.2
 
 - Boards: fix "+ Card / List / Note" buttons not adding anything (trailing-slash mismatch between frontend and FastAPI routes)

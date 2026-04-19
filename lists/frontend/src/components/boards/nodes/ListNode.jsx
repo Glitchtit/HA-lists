@@ -3,7 +3,8 @@ import { Handle, Position } from 'reactflow';
 
 function ListNode({ data, selected }) {
   const summary = data?.ref_summary;
-  const tombstone = !summary && (data?.kind === 'list');
+  // Only tombstone if we have a ref_id but no summary — not when summary is simply absent
+  const tombstone = data?.ref_id != null && !summary;
   const color = data?.color || 'var(--brand-cobalt)';
 
   const itemCount = summary?.item_count ?? 0;
