@@ -386,3 +386,187 @@ class TestMoveValidation:
         list_id = client.post("/api/lists/", json={"name": "L"}).json()["id"]
         r = client.patch(f"/api/lists/{list_id}", json={"folder_id": 9999})
         assert r.status_code == 400
+
+
+class TestNotes:
+    def test_create_with_defaults(self, client):
+        r = client.post("/api/notes/", json={"title": "Hello"})
+        assert r.status_code == 201
+        data = r.json()
+        assert data["title"] == "Hello"
+        assert data["body"] == ""
+        assert data["icon"] == "📝"
+        assert data["pinned"] is False
+        assert data["archived"] is False
+        assert data["ai_generated"] is False
+
+    def test_create_in_folder_and_validates(self, client):
+        fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        r = client.post("/api/notes/", json={"title": "N", "folder_id": fid})
+        assert r.status_code == 201
+        assert r.json()["folder_id"] == fid
+        bad = client.post("/api/notes/", json={"title": "X", "folder_id": 99999})
+        assert bad.status_code == 400
+
+    def test_patch_archive_pinned(self, client):
+        nid = client.post("/api/notes/", json={"title": "N"}).json()["id"]
+        r = client.patch(f"/api/notes/{nid}", json={"pinned": True, "archived": True})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["pinned"] is True
+        assert data["archived"] is True
+        # Archived hidden by default
+        assert len(client.get("/api/notes/").json()) == 0
+        assert len(client.get("/api/notes/?archived=true").json()) == 1
+
+    def test_folder_deletion_detaches_notes(self, client):
+        fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        nid = client.post("/api/notes/", json={"title": "N", "folder_id": fid}).json()["id"]
+        client.delete(f"/api/folders/{fid}")
+        r = client.get(f"/api/notes/{nid}")
+        assert r.status_code == 200
+        assert r.json()["folder_id"] is None
+
+    def test_delete_cascades_note_links(self, client, tmp_db):
+        nid = client.post(
+            "/api/notes/", json={"title": "Src", "body": "See [[Target]] and ![[Other]]"}
+        ).json()["id"]
+        rows = tmp_db.execute(
+            "SELECT COUNT(*) AS c FROM note_links WHERE source_note_id = ?", (nid,)
+        ).fetchone()
+        assert rows["c"] == 2
+        client.delete(f"/api/notes/{nid}")
+        rows = tmp_db.execute(
+            "SELECT COUNT(*) AS c FROM note_links WHERE source_note_id = ?", (nid,)
+        ).fetchone()
+        assert rows["c"] == 0
+
+    def test_search_filter(self, client):
+        client.post("/api/notes/", json={"title": "Apple pie", "body": "sweet"})
+        client.post("/api/notes/", json={"title": "Salad", "body": "with apples"})
+        client.post("/api/notes/", json={"title": "Bread", "body": "yeasty"})
+        r = client.get("/api/notes/?search=apple").json()
+        titles = sorted(n["title"] for n in r)
+        assert titles == ["Apple pie", "Salad"]
+
+    def test_duplicate_copies_body_and_links(self, client, tmp_db):
+        nid = client.post(
+            "/api/notes/", json={"title": "Orig", "body": "has [[Ref]]"}
+        ).json()["id"]
+        r = client.post(f"/api/notes/{nid}/duplicate")
+        assert r.status_code == 201
+        new_id = r.json()["id"]
+        assert new_id != nid
+        assert r.json()["title"].endswith("(copy)")
+        assert r.json()["body"] == "has [[Ref]]"
+        rows = tmp_db.execute(
+            "SELECT target_title FROM note_links WHERE source_note_id = ?", (new_id,)
+        ).fetchall()
+        assert [r["target_title"] for r in rows] == ["Ref"]
+
+    def test_list_order(self, client):
+        a = client.post("/api/notes/", json={"title": "A", "sort_order": 3}).json()["id"]
+        b = client.post("/api/notes/", json={"title": "B", "sort_order": 1}).json()["id"]
+        c = client.post(
+            "/api/notes/", json={"title": "C", "sort_order": 5, "pinned": True}
+        ).json()["id"]
+        ids = [n["id"] for n in client.get("/api/notes/").json()]
+        # Pinned first, then by sort_order ascending
+        assert ids[0] == c
+        assert ids.index(b) < ids.index(a)
+
+
+class TestWikilinkParser:
+    def test_plain(self):
+        from routers._wikilinks import extract_wikilinks
+        assert extract_wikilinks("see [[Foo]] here") == [("Foo", "wikilink")]
+
+    def test_embed(self):
+        from routers._wikilinks import extract_wikilinks
+        assert extract_wikilinks("![[Bar]]") == [("Bar", "embed")]
+
+    def test_alias_keeps_title(self):
+        from routers._wikilinks import extract_wikilinks
+        assert extract_wikilinks("[[Foo|alias text]]") == [("Foo", "wikilink")]
+
+    def test_both_kinds_preserve_order_and_dedup(self):
+        from routers._wikilinks import extract_wikilinks
+        body = "![[Bar]] and [[Foo]] then [[Foo]] again and ![[Bar]] too"
+        assert extract_wikilinks(body) == [("Bar", "embed"), ("Foo", "wikilink")]
+
+    def test_ignores_fenced_code(self):
+        from routers._wikilinks import extract_wikilinks
+        body = "```\n[[Fenced]]\n```\n[[Outside]]"
+        assert extract_wikilinks(body) == [("Outside", "wikilink")]
+
+    def test_ignores_inline_backticks(self):
+        from routers._wikilinks import extract_wikilinks
+        assert extract_wikilinks("prose `[[Ignored]]` text [[Real]]") == [
+            ("Real", "wikilink")
+        ]
+
+    def test_empty(self):
+        from routers._wikilinks import extract_wikilinks
+        assert extract_wikilinks("") == []
+        assert extract_wikilinks(None or "") == []
+
+    def test_unmatched_no_crash(self):
+        from routers._wikilinks import extract_wikilinks
+        # Unmatched brackets / nested should not raise
+        out = extract_wikilinks("[[broken and [[nested]] oops")
+        assert ("nested", "wikilink") in out
+
+
+class TestBacklinks:
+    def test_source_rename_preserves_link(self, client):
+        a = client.post("/api/notes/", json={"title": "A", "body": "ref [[B]]"}).json()["id"]
+        b = client.post("/api/notes/", json={"title": "B"}).json()["id"]
+        # rename source
+        client.patch(f"/api/notes/{a}", json={"title": "A-renamed"})
+        bls = client.get(f"/api/notes/{b}/backlinks").json()
+        assert len(bls) == 1
+        assert bls[0]["note_id"] == a
+        assert bls[0]["title"] == "A-renamed"
+
+    def test_target_rename_breaks_link(self, client):
+        a = client.post("/api/notes/", json={"title": "A", "body": "ref [[B]]"}).json()["id"]
+        b = client.post("/api/notes/", json={"title": "B"}).json()["id"]
+        client.patch(f"/api/notes/{b}", json={"title": "B2"})
+        assert client.get(f"/api/notes/{b}/backlinks").json() == []
+
+    def test_resolve_case_insensitive(self, client):
+        nid = client.post("/api/notes/", json={"title": "Hello World"}).json()["id"]
+        r = client.get("/api/notes/resolve", params={"title": "HELLO WORLD"})
+        assert r.status_code == 200
+        assert r.json()["note_id"] == nid
+
+    def test_embed_vs_wikilink(self, client):
+        a = client.post(
+            "/api/notes/", json={"title": "A", "body": "![[B]] and [[B]]"}
+        ).json()["id"]
+        b = client.post("/api/notes/", json={"title": "B"}).json()["id"]
+        bls = client.get(f"/api/notes/{b}/backlinks").json()
+        kinds = sorted(bl["link_type"] for bl in bls)
+        assert kinds == ["embed", "wikilink"]
+
+    def test_resolve_ambiguity_lowest_id(self, client):
+        first = client.post("/api/notes/", json={"title": "Dup"}).json()["id"]
+        second = client.post("/api/notes/", json={"title": "Dup"}).json()["id"]
+        assert second > first
+        r = client.get("/api/notes/resolve", params={"title": "Dup"})
+        assert r.json()["note_id"] == first
+
+    def test_resolve_unknown(self, client):
+        r = client.get("/api/notes/resolve", params={"title": "Nope"})
+        assert r.status_code == 404
+
+    def test_snippet_length_and_position(self, client):
+        prefix = "x" * 200
+        body = f"{prefix} see [[B]] here {prefix}"
+        a = client.post("/api/notes/", json={"title": "A", "body": body}).json()["id"]
+        b = client.post("/api/notes/", json={"title": "B"}).json()["id"]
+        bls = client.get(f"/api/notes/{b}/backlinks").json()
+        assert len(bls) == 1
+        snip = bls[0]["snippet"]
+        assert len(snip) <= 120
+        assert "[[B]]" in snip or "B" in snip
