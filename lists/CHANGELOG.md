@@ -1,3 +1,10 @@
+## 0.5.0
+
+- AI provider is now configured directly in the add-on options (no Storage dependency)
+- Add `ai_provider` (gemini/claude/ollama), `ai_gemini_api_key`, `ai_gemini_model`,
+  `ai_claude_api_key`, `ai_claude_model`, `ai_ollama_url`, `ai_ollama_model` to add-on schema
+- AI config is read from `/data/options.json` at runtime; changes take effect on next restart
+
 ## 0.4.0
 
 - Design-system polish: apply GlitchyRee tokens (International Orange + Cobalt Blue) across the frontend

@@ -1,126 +1,110 @@
-"""HA-lists — Bridge to HA-storage for centralised AI config.
+"""HA-lists — AI config reader from the add-on options file.
 
-Storage exposes `GET /api/config/ai` with the shape:
+HA Supervisor writes the user's add-on configuration to ``/data/options.json``
+at startup.  We read the relevant ``ai_*`` keys from there and expose the same
+normalised dict that ``provider.py`` expects.
 
-    {
-      "provider": "gemini" | "claude" | "ollama",
-      "api_key": "...",           # gemini key
-      "model": "gemini-2.0-flash",
-      "ollama_url": "...",
-      "ollama_model": "...",
-      "claude_api_key": "...",
-      "claude_model": "..."
-    }
+Supported keys in options.json:
 
-We cache the result for a short TTL and refresh lazily.  If Storage is
-unreachable, AI features raise; non-AI CRUD keeps working.
+    ai_provider          "gemini" | "claude" | "ollama"  (default: gemini)
+    ai_gemini_api_key    Gemini API key
+    ai_gemini_model      e.g. "gemini-2.0-flash"
+    ai_claude_api_key    Anthropic API key
+    ai_claude_model      e.g. "claude-3-5-haiku-20241022"
+    ai_ollama_url        Ollama base URL
+    ai_ollama_model      e.g. "llama3"
+
+The file is read once and cached; call ``invalidate_cache()`` to force a fresh
+read (done automatically on 401/403 from a provider).
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
-import time
 from typing import Any
-
-import httpx
 
 logger = logging.getLogger(__name__)
 
 _CACHE_TTL_SEC = 600  # 10 minutes
-_REQUEST_TIMEOUT = 10.0
-
 _lock = threading.Lock()
 _cached: dict[str, Any] | None = None
-_cached_at: float = 0.0
+_cached_mtime: float = 0.0
 
 
-def _default_storage_url() -> str:
-    return (
-        os.environ.get("STORAGE_URL")
-        or "http://a0a9ed235-ha-storage:8099"
-    ).rstrip("/")
+def _options_path() -> str:
+    return os.environ.get("OPTIONS_PATH", "/data/options.json")
 
 
-def _normalise(raw: dict[str, Any]) -> dict[str, Any]:
-    """Normalise Storage's /api/config/ai shape into the one the provider expects."""
-    provider = (raw.get("provider") or "gemini").strip() or "gemini"
+def _read_options() -> dict[str, Any]:
+    path = _options_path()
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.debug("options.json not found at %s — using defaults", path)
+        return {}
+    except Exception as exc:
+        logger.warning("Failed to read options.json: %s", exc)
+        return {}
+
+
+def _normalise(opts: dict[str, Any]) -> dict[str, Any]:
+    provider = (opts.get("ai_provider") or "gemini").strip() or "gemini"
     return {
         "provider": provider,
-        "gemini_api_key": raw.get("api_key") or raw.get("gemini_api_key") or "",
-        "gemini_model": raw.get("model") or raw.get("gemini_model") or "gemini-2.0-flash",
-        "ollama_url": raw.get("ollama_url") or "",
-        "ollama_model": raw.get("ollama_model") or "llama3",
-        "claude_api_key": raw.get("claude_api_key") or "",
-        "claude_model": raw.get("claude_model") or "claude-3-5-haiku-20241022",
+        "gemini_api_key": opts.get("ai_gemini_api_key") or "",
+        "gemini_model": opts.get("ai_gemini_model") or "gemini-2.0-flash",
+        "claude_api_key": opts.get("ai_claude_api_key") or "",
+        "claude_model": opts.get("ai_claude_model") or "claude-3-5-haiku-20241022",
+        "ollama_url": opts.get("ai_ollama_url") or "",
+        "ollama_model": opts.get("ai_ollama_model") or "llama3",
     }
 
 
 def invalidate_cache() -> None:
-    """Clear the cached config — used on 401/403 from a provider."""
-    global _cached, _cached_at
+    """Clear the cached config — called on 401/403 from a provider."""
+    global _cached, _cached_mtime
     with _lock:
         _cached = None
-        _cached_at = 0.0
+        _cached_mtime = 0.0
 
 
 def get_ai_config(*, force_refresh: bool = False) -> dict[str, Any]:
-    """Return the AI provider config, cached for _CACHE_TTL_SEC.
+    """Return the AI provider config read from the add-on options file.
+
+    Caches the result until ``invalidate_cache()`` is called or the options
+    file modification time changes.
 
     Raises:
-        RuntimeError: if Storage is unreachable or returns non-200.
+        RuntimeError: if the selected provider has no usable configuration
+                      (missing API key / URL).
     """
-    global _cached, _cached_at
-    now = time.time()
+    global _cached, _cached_mtime
+
+    path = _options_path()
+    try:
+        current_mtime = os.path.getmtime(path)
+    except OSError:
+        current_mtime = 0.0
+
     with _lock:
-        if (
-            not force_refresh
-            and _cached is not None
-            and now - _cached_at < _CACHE_TTL_SEC
-        ):
+        if not force_refresh and _cached is not None and current_mtime == _cached_mtime:
             return dict(_cached)
 
-    url = f"{_default_storage_url()}/api/config/ai"
-    try:
-        with httpx.Client(timeout=_REQUEST_TIMEOUT) as client:
-            resp = client.get(url)
-    except httpx.HTTPError as exc:
-        raise RuntimeError(f"Cannot reach Storage AI config at {url}: {exc}") from exc
+    opts = _read_options()
+    cfg = _normalise(opts)
 
-    if resp.status_code != 200:
-        raise RuntimeError(
-            f"Storage AI config returned HTTP {resp.status_code}: {resp.text[:200]}"
-        )
-
-    cfg = _normalise(resp.json())
     with _lock:
         _cached = cfg
-        _cached_at = now
+        _cached_mtime = current_mtime
+
     logger.info(
-        "Fetched AI config from Storage (provider=%s, model=%s)",
+        "Loaded AI config from options.json (provider=%s, model=%s)",
         cfg["provider"],
         cfg.get(f"{cfg['provider']}_model") or cfg.get("gemini_model"),
     )
     return dict(cfg)
 
-
-def wait_for_storage(max_retries: int = 30, delay: float = 5.0) -> bool:
-    """Block until Storage is reachable. Returns True on success, False on timeout.
-
-    Non-fatal: AI routers degrade to 503 if Storage is down; CRUD keeps running.
-    """
-    url = f"{_default_storage_url()}/api/health"
-    for attempt in range(1, max_retries + 1):
-        try:
-            with httpx.Client(timeout=_REQUEST_TIMEOUT) as client:
-                resp = client.get(url)
-            if resp.status_code == 200:
-                logger.info("Storage reachable at %s", url)
-                return True
-        except httpx.HTTPError:
-            pass
-        if attempt < max_retries:
-            time.sleep(delay)
-    logger.warning("Storage not reachable after %d attempts (%s)", max_retries, url)
-    return False
