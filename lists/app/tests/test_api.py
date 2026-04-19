@@ -954,3 +954,389 @@ class TestBoardEdges:
         )
         client.delete(f"/api/boards/{bid}/nodes/{n1}")
         assert len(client.get(f"/api/boards/{bid}").json()["edges"]) == 0
+
+
+class TestBoardAttachments:
+    def _board(self, client) -> int:
+        return client.post("/api/boards/", json={"name": "B"}).json()["id"]
+
+    def _upload(self, client, bid: int, content: bytes = b"hello",
+                name: str = "pic.png", mime: str = "image/png") -> dict:
+        r = client.post(
+            f"/api/boards/{bid}/attachments",
+            files={"file": (name, content, mime)},
+        )
+        assert r.status_code == 201, r.text
+        return r.json()
+
+    def test_upload_returns_metadata(self, client):
+        bid = self._board(client)
+        meta = self._upload(client, bid)
+        assert meta["filename"]
+        assert meta["filename"].endswith(".png")
+        assert meta["original_name"] == "pic.png"
+        assert meta["mime"] == "image/png"
+        assert meta["size"] == len(b"hello")
+
+    def test_create_image_node_from_upload(self, client):
+        bid = self._board(client)
+        meta = self._upload(client, bid)
+        r = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={
+                "kind": "image",
+                "media_filename": meta["filename"],
+                "media_mime": meta["mime"],
+                "media_size": meta["size"],
+                "media_alt": "cat photo",
+                "x": 10,
+                "y": 20,
+            },
+        )
+        assert r.status_code == 201, r.text
+        node = r.json()
+        assert node["kind"] == "image"
+        assert node["media_filename"] == meta["filename"]
+        assert node["media_alt"] == "cat photo"
+
+    def test_serve_attachment_requires_referencing_node(self, client):
+        bid = self._board(client)
+        meta = self._upload(client, bid)
+        # No node references the file yet → 404.
+        r = client.get(f"/api/boards/{bid}/attachments/{meta['filename']}")
+        assert r.status_code == 404
+
+        client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "image", "media_filename": meta["filename"]},
+        )
+        r = client.get(f"/api/boards/{bid}/attachments/{meta['filename']}")
+        assert r.status_code == 200
+        assert r.content == b"hello"
+
+    def test_delete_node_purges_orphan_media(self, client, tmp_path):
+        bid = self._board(client)
+        meta = self._upload(client, bid)
+        nid = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "image", "media_filename": meta["filename"]},
+        ).json()["id"]
+        # File exists on disk.
+        path = tmp_path / "board_media" / str(bid) / meta["filename"]
+        assert path.exists()
+
+        assert client.delete(f"/api/boards/{bid}/nodes/{nid}").status_code == 204
+        assert not path.exists()
+
+    def test_shared_media_survives_single_node_delete(self, client, tmp_path):
+        bid = self._board(client)
+        meta = self._upload(client, bid)
+        n1 = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "image", "media_filename": meta["filename"]},
+        ).json()["id"]
+        client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "image", "media_filename": meta["filename"]},
+        )
+        path = tmp_path / "board_media" / str(bid) / meta["filename"]
+        assert path.exists()
+
+        client.delete(f"/api/boards/{bid}/nodes/{n1}")
+        # Second node still references it; file must survive.
+        assert path.exists()
+
+    def test_create_rejects_missing_media_filename(self, client):
+        bid = self._board(client)
+        r = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "image"}
+        )
+        assert r.status_code == 400
+
+    def test_create_rejects_unknown_media_filename(self, client):
+        bid = self._board(client)
+        r = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "file", "media_filename": "nope.bin"},
+        )
+        assert r.status_code == 400
+
+    def test_serve_rejects_path_traversal(self, client):
+        bid = self._board(client)
+        r = client.get(f"/api/boards/{bid}/attachments/..%2Fetc%2Fpasswd")
+        # Either 400 (invalid) or 404 — never a file outside the media dir.
+        assert r.status_code in (400, 404)
+
+    def test_board_detail_includes_media_fields(self, client):
+        bid = self._board(client)
+        meta = self._upload(client, bid, name="doc.pdf", mime="application/pdf")
+        client.post(
+            f"/api/boards/{bid}/nodes",
+            json={
+                "kind": "file",
+                "media_filename": meta["filename"],
+                "media_mime": meta["mime"],
+                "media_size": meta["size"],
+            },
+        )
+        detail = client.get(f"/api/boards/{bid}").json()
+        node = detail["nodes"][0]
+        assert node["kind"] == "file"
+        assert node["media_filename"] == meta["filename"]
+        assert node["media_mime"] == "application/pdf"
+
+
+class TestBoardGroups:
+    def _board(self, client) -> int:
+        return client.post("/api/boards/", json={"name": "B"}).json()["id"]
+
+    def _card(self, client, bid, **kw) -> int:
+        payload = {"kind": "card", "title": "c", "x": 0, "y": 0, **kw}
+        return client.post(f"/api/boards/{bid}/nodes", json=payload).json()["id"]
+
+    def _group(self, client, bid, **kw) -> int:
+        payload = {
+            "kind": "group",
+            "title": "G",
+            "x": 0,
+            "y": 0,
+            "width": 400,
+            "height": 260,
+            **kw,
+        }
+        return client.post(f"/api/boards/{bid}/nodes", json=payload).json()["id"]
+
+    def test_create_group(self, client):
+        bid = self._board(client)
+        r = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "group", "title": "G1", "width": 320, "height": 200},
+        )
+        assert r.status_code == 201, r.text
+        data = r.json()
+        assert data["kind"] == "group"
+        assert data["title"] == "G1"
+        assert data["parent_group_id"] is None
+
+    def test_set_parent_on_create(self, client):
+        bid = self._board(client)
+        gid = self._group(client, bid)
+        r = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "card", "title": "child", "parent_group_id": gid},
+        )
+        assert r.status_code == 201, r.text
+        assert r.json()["parent_group_id"] == gid
+
+    def test_set_parent_via_patch(self, client):
+        bid = self._board(client)
+        gid = self._group(client, bid)
+        cid = self._card(client, bid)
+        r = client.patch(
+            f"/api/boards/{bid}/nodes/{cid}", json={"parent_group_id": gid}
+        )
+        assert r.status_code == 200
+        assert r.json()["parent_group_id"] == gid
+
+    def test_ungroup_via_patch(self, client):
+        bid = self._board(client)
+        gid = self._group(client, bid)
+        cid = self._card(client, bid, parent_group_id=gid)
+        r = client.patch(
+            f"/api/boards/{bid}/nodes/{cid}", json={"parent_group_id": None}
+        )
+        assert r.status_code == 200
+        assert r.json()["parent_group_id"] is None
+
+    def test_reject_parent_not_group(self, client):
+        bid = self._board(client)
+        target = self._card(client, bid)
+        r = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "card", "parent_group_id": target},
+        )
+        assert r.status_code == 400
+
+    def test_reject_parent_on_other_board(self, client):
+        b1 = self._board(client)
+        b2 = self._board(client)
+        g2 = self._group(client, b2)
+        r = client.post(
+            f"/api/boards/{b1}/nodes",
+            json={"kind": "card", "parent_group_id": g2},
+        )
+        assert r.status_code == 400
+
+    def test_reject_self_parent(self, client):
+        bid = self._board(client)
+        gid = self._group(client, bid)
+        r = client.patch(
+            f"/api/boards/{bid}/nodes/{gid}", json={"parent_group_id": gid}
+        )
+        assert r.status_code == 400
+
+    def test_reject_cycle(self, client):
+        bid = self._board(client)
+        g1 = self._group(client, bid)
+        g2 = self._group(client, bid, parent_group_id=g1)
+        # g1 cannot become a child of g2 (cycle g1→g2→g1)
+        r = client.patch(
+            f"/api/boards/{bid}/nodes/{g1}", json={"parent_group_id": g2}
+        )
+        assert r.status_code == 400
+
+    def test_translate_moves_group_and_children(self, client):
+        bid = self._board(client)
+        gid = self._group(client, bid, x=100, y=200)
+        c1 = self._card(client, bid, x=120, y=220, parent_group_id=gid)
+        c2 = self._card(client, bid, x=140, y=240, parent_group_id=gid)
+        other = self._card(client, bid, x=500, y=500)
+        r = client.post(
+            f"/api/boards/{bid}/nodes/{gid}/translate",
+            json={"dx": 10, "dy": -5},
+        )
+        assert r.status_code == 204, r.text
+        detail = client.get(f"/api/boards/{bid}").json()
+        coords = {n["id"]: (n["x"], n["y"]) for n in detail["nodes"]}
+        assert coords[gid] == (110.0, 195.0)
+        assert coords[c1] == (130.0, 215.0)
+        assert coords[c2] == (150.0, 235.0)
+        assert coords[other] == (500.0, 500.0)  # unaffected
+
+    def test_translate_cascades_nested(self, client):
+        bid = self._board(client)
+        outer = self._group(client, bid, x=0, y=0)
+        inner = self._group(client, bid, x=10, y=10, parent_group_id=outer)
+        grandchild = self._card(client, bid, x=20, y=20, parent_group_id=inner)
+        r = client.post(
+            f"/api/boards/{bid}/nodes/{outer}/translate",
+            json={"dx": 100, "dy": 0},
+        )
+        assert r.status_code == 204
+        detail = client.get(f"/api/boards/{bid}").json()
+        coords = {n["id"]: (n["x"], n["y"]) for n in detail["nodes"]}
+        assert coords[outer] == (100.0, 0.0)
+        assert coords[inner] == (110.0, 10.0)
+        assert coords[grandchild] == (120.0, 20.0)
+
+    def test_translate_rejects_non_group(self, client):
+        bid = self._board(client)
+        cid = self._card(client, bid)
+        r = client.post(
+            f"/api/boards/{bid}/nodes/{cid}/translate", json={"dx": 1, "dy": 1}
+        )
+        assert r.status_code == 400
+
+    def test_delete_group_nulls_children_parent(self, client):
+        bid = self._board(client)
+        gid = self._group(client, bid)
+        cid = self._card(client, bid, parent_group_id=gid)
+        assert client.delete(f"/api/boards/{bid}/nodes/{gid}").status_code == 204
+        detail = client.get(f"/api/boards/{bid}").json()
+        child = next(n for n in detail["nodes"] if n["id"] == cid)
+        assert child["parent_group_id"] is None
+
+    def test_duplicate_preserves_group_structure(self, client):
+        bid = self._board(client)
+        gid = self._group(client, bid, title="Grp")
+        c1 = self._card(client, bid, title="child1", parent_group_id=gid)
+        c2 = self._card(client, bid, title="child2", parent_group_id=gid)  # noqa: F841
+        new_id = client.post(f"/api/boards/{bid}/duplicate").json()["id"]
+        detail = client.get(f"/api/boards/{new_id}").json()
+        groups = [n for n in detail["nodes"] if n["kind"] == "group"]
+        cards = [n for n in detail["nodes"] if n["kind"] == "card"]
+        assert len(groups) == 1
+        assert len(cards) == 2
+        new_gid = groups[0]["id"]
+        assert all(c["parent_group_id"] == new_gid for c in cards)
+        # Ids must be remapped (not the source's).
+        assert new_gid != gid
+        assert all(c["id"] not in (c1,) for c in cards)
+
+    def test_board_detail_includes_parent_group_id(self, client):
+        bid = self._board(client)
+        gid = self._group(client, bid)
+        cid = self._card(client, bid, parent_group_id=gid)
+        detail = client.get(f"/api/boards/{bid}").json()
+        child = next(n for n in detail["nodes"] if n["id"] == cid)
+        assert child["parent_group_id"] == gid
+
+
+class TestBoardPortals:
+    def _board(self, client, name="B") -> int:
+        return client.post("/api/boards/", json={"name": name}).json()["id"]
+
+    def test_create_board_portal(self, client):
+        src = self._board(client, "Src")
+        dst = self._board(client, "Dst")
+        r = client.post(
+            f"/api/boards/{src}/nodes",
+            json={"kind": "board", "ref_id": dst, "x": 0, "y": 0},
+        )
+        assert r.status_code == 201, r.text
+        data = r.json()
+        assert data["kind"] == "board"
+        assert data["ref_id"] == dst
+
+    def test_portal_requires_ref_id(self, client):
+        src = self._board(client)
+        r = client.post(
+            f"/api/boards/{src}/nodes", json={"kind": "board"}
+        )
+        assert r.status_code == 400
+
+    def test_portal_rejects_self_reference(self, client):
+        bid = self._board(client)
+        r = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "board", "ref_id": bid},
+        )
+        assert r.status_code == 400
+
+    def test_portal_rejects_missing_ref(self, client):
+        bid = self._board(client)
+        r = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "board", "ref_id": 999_999},
+        )
+        assert r.status_code == 400
+
+    def test_portal_ref_summary(self, client):
+        src = self._board(client, "Src")
+        dst = self._board(client, "Dst")
+        # populate dst with a couple of nodes + one edge
+        a = client.post(
+            f"/api/boards/{dst}/nodes", json={"kind": "card", "title": "a"}
+        ).json()["id"]
+        b = client.post(
+            f"/api/boards/{dst}/nodes", json={"kind": "card", "title": "b"}
+        ).json()["id"]
+        client.post(
+            f"/api/boards/{dst}/edges",
+            json={"source_node_id": a, "target_node_id": b},
+        )
+        client.post(
+            f"/api/boards/{src}/nodes",
+            json={"kind": "board", "ref_id": dst},
+        )
+        detail = client.get(f"/api/boards/{src}").json()
+        portal = next(n for n in detail["nodes"] if n["kind"] == "board")
+        summary = portal["ref_summary"]
+        assert summary is not None
+        assert summary["id"] == dst
+        assert summary["name"] == "Dst"
+        assert summary["node_count"] == 2
+        assert summary["edge_count"] == 1
+        assert summary["last_modified"]
+
+    def test_portal_tombstone_when_target_deleted(self, client):
+        src = self._board(client, "Src")
+        dst = self._board(client, "Dst")
+        client.post(
+            f"/api/boards/{src}/nodes",
+            json={"kind": "board", "ref_id": dst},
+        )
+        client.delete(f"/api/boards/{dst}")
+        detail = client.get(f"/api/boards/{src}").json()
+        portal = next(n for n in detail["nodes"] if n["kind"] == "board")
+        assert portal["ref_summary"] is None

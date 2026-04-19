@@ -115,6 +115,8 @@ export const deleteBoardNode = (boardId, nodeId) =>
   api.delete(`/boards/${boardId}/nodes/${nodeId}`);
 export const bulkUpdateBoardNodePositions = (boardId, positions) =>
   api.post(`/boards/${boardId}/nodes/bulk-positions`, { positions }).then(r => r.data);
+export const translateBoardGroup = (boardId, groupId, dx, dy) =>
+  api.post(`/boards/${boardId}/nodes/${groupId}/translate`, { dx, dy }).then(r => r.data);
 
 // ── Board edges ────────────────────────────────────────────────────────────
 export const createBoardEdge = (boardId, payload) =>
@@ -123,3 +125,14 @@ export const updateBoardEdge = (boardId, edgeId, patch) =>
   api.patch(`/boards/${boardId}/edges/${edgeId}`, patch).then(r => r.data);
 export const deleteBoardEdge = (boardId, edgeId) =>
   api.delete(`/boards/${boardId}/edges/${edgeId}`);
+
+// ── Board attachments ──────────────────────────────────────────────────────
+export const uploadBoardAttachment = (boardId, file) => {
+  const form = new FormData();
+  form.append('file', file, file.name || 'upload.bin');
+  return api.post(`/boards/${boardId}/attachments`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data);
+};
+export const attachmentUrl = (boardId, filename) =>
+  `${INGRESS_PATH}/api/boards/${boardId}/attachments/${encodeURIComponent(filename)}`;
