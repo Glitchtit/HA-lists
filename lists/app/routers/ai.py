@@ -67,7 +67,7 @@ def _ai_config_or_503() -> dict[str, Any]:
     try:
         return storage_client.get_ai_config()
     except RuntimeError as exc:
-        raise HTTPException(503, f"AI unavailable: {exc}") from exc
+        raise HTTPException(503, f"AI unavailable: {exc}. Configure ai_provider and API key in add-on options.") from exc
 
 
 # ── Endpoints ───────────────────────────────────────────────────────────────
