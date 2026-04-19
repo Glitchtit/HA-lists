@@ -125,4 +125,29 @@ CREATE TABLE IF NOT EXISTS item_tags (
     PRIMARY KEY (item_id, tag_id)
 );
 CREATE INDEX IF NOT EXISTS idx_item_tags_tag ON item_tags(tag_id);
+
+CREATE TABLE IF NOT EXISTS notes (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    folder_id    INTEGER REFERENCES folders(id) ON DELETE SET NULL,
+    title        TEXT    NOT NULL,
+    body         TEXT    NOT NULL DEFAULT '',
+    icon         TEXT    DEFAULT '📝',
+    color        TEXT    DEFAULT '',
+    pinned       INTEGER DEFAULT 0,
+    archived     INTEGER DEFAULT 0,
+    sort_order   INTEGER DEFAULT 0,
+    ai_generated INTEGER DEFAULT 0,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
+CREATE INDEX IF NOT EXISTS idx_notes_title  ON notes(title);
+
+CREATE TABLE IF NOT EXISTS note_links (
+    source_note_id INTEGER NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+    target_title   TEXT    NOT NULL,
+    link_type      TEXT    NOT NULL CHECK (link_type IN ('wikilink','embed')),
+    UNIQUE(source_note_id, target_title, link_type)
+);
+CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_title);
 """

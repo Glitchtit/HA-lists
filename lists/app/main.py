@@ -123,7 +123,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 
-from routers import folders, health, items, lists as lists_router, persons, subtasks, tags
+from routers import folders, health, items, lists as lists_router, notes, notes_ai, persons, subtasks, tags
 from routers import ai as ai_router
 
 app.include_router(health.router)
@@ -134,6 +134,8 @@ app.include_router(subtasks.router)
 app.include_router(tags.router)
 app.include_router(persons.router)
 app.include_router(ai_router.router)
+app.include_router(notes.router)
+app.include_router(notes_ai.router)
 
 
 if __name__ == "__main__":

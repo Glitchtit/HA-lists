@@ -190,3 +190,49 @@ class Person(BaseModel):
     avatar_url: str
     active: bool
     created_at: str
+
+
+# ── Notes ─────────────────────────────────────────────────────────────────────
+
+
+class NoteCreate(BaseModel):
+    title: str
+    body: str = ""
+    folder_id: int | None = None
+    icon: str = "📝"
+    color: str = ""
+    pinned: bool = False
+    sort_order: int = 0
+
+
+class NoteUpdate(BaseModel):
+    title: str | None = None
+    body: str | None = None
+    folder_id: int | None = None
+    icon: str | None = None
+    color: str | None = None
+    pinned: bool | None = None
+    archived: bool | None = None
+    sort_order: int | None = None
+
+
+class Note(BaseModel):
+    id: int
+    folder_id: int | None
+    title: str
+    body: str
+    icon: str
+    color: str
+    pinned: bool
+    archived: bool
+    sort_order: int
+    ai_generated: bool
+    created_at: str
+    updated_at: str
+
+
+class BacklinkEntry(BaseModel):
+    note_id: int
+    title: str
+    snippet: str
+    link_type: str

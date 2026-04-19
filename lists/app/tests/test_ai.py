@@ -280,3 +280,96 @@ def test_storage_down_returns_503(client, monkeypatch):
     ]:
         resp = client.post(path, json=body)
         assert resp.status_code == 503, f"{path} expected 503, got {resp.status_code}"
+
+
+# ── AI notes endpoint tests ─────────────────────────────────────────────────
+
+
+def test_note_summarize(client, ai_env):
+    from ai import provider
+    nid = client.post("/api/notes/", json={"title": "N", "body": "Long text."}).json()["id"]
+    ai_env.setattr(provider, "call_ai_json", lambda *a, **k: {"summary": "tl;dr"})
+    r = client.post("/api/ai/notes/summarize", json={"note_id": nid})
+    assert r.status_code == 200
+    assert r.json()["summary"] == "tl;dr"
+
+
+def test_note_continue(client, ai_env):
+    from ai import provider
+    nid = client.post("/api/notes/", json={"title": "N", "body": "so far..."}).json()["id"]
+    ai_env.setattr(provider, "call_ai_json", lambda *a, **k: {"continuation": "...and then"})
+    r = client.post("/api/ai/notes/continue", json={"note_id": nid, "prompt": "wrap it up"})
+    assert r.status_code == 200
+    assert r.json()["continuation"] == "...and then"
+
+
+def test_note_rewrite(client, ai_env):
+    from ai import provider
+    nid = client.post("/api/notes/", json={"title": "N", "body": "hey"}).json()["id"]
+    ai_env.setattr(provider, "call_ai_json", lambda *a, **k: {"body": "Hello."})
+    r = client.post("/api/ai/notes/rewrite", json={"note_id": nid, "tone": "formal"})
+    assert r.status_code == 200
+    assert r.json() == {"note_id": nid, "body": "Hello.", "tone": "formal"}
+
+
+def test_note_outline(client, ai_env):
+    from ai import provider
+    nid = client.post("/api/notes/", json={"title": "N", "body": "stuff"}).json()["id"]
+    ai_env.setattr(provider, "call_ai_json", lambda *a, **k: {"outline": "## H\n- a"})
+    r = client.post("/api/ai/notes/outline", json={"note_id": nid})
+    assert r.status_code == 200
+    assert r.json()["outline"].startswith("## H")
+
+
+def test_note_extract_tasks_creates_items(client, ai_env):
+    from ai import provider
+    nid = client.post(
+        "/api/notes/", json={"title": "N", "body": "buy milk, cancel gym"}
+    ).json()["id"]
+    lst = client.post("/api/lists/", json={"name": "Todo"}).json()["id"]
+    ai_env.setattr(provider, "call_ai_json", lambda *a, **k: {
+        "tasks": [
+            {"title": "Buy milk", "notes": "2L"},
+            {"title": "Cancel gym"},
+            "Call bank",
+            {"title": ""},
+        ]
+    })
+    r = client.post(
+        "/api/ai/notes/extract-tasks",
+        json={"note_id": nid, "target_list_id": lst},
+    )
+    assert r.status_code == 200
+    created = r.json()["created"]
+    assert [t["title"] for t in created] == ["Buy milk", "Cancel gym", "Call bank"]
+    items = client.get(f"/api/items/?list_id={lst}").json()
+    assert sorted(i["title"] for i in items) == ["Buy milk", "Call bank", "Cancel gym"]
+
+
+def test_note_extract_tasks_bad_list(client, ai_env):
+    nid = client.post("/api/notes/", json={"title": "N", "body": "x"}).json()["id"]
+    r = client.post(
+        "/api/ai/notes/extract-tasks",
+        json={"note_id": nid, "target_list_id": 99999},
+    )
+    assert r.status_code == 400
+
+
+def test_notes_ai_503_when_storage_down(client, monkeypatch):
+    from ai import storage_client
+
+    def boom(*a, **k):
+        raise RuntimeError("Storage offline")
+
+    monkeypatch.setattr(storage_client, "get_ai_config", boom)
+    nid = client.post("/api/notes/", json={"title": "N", "body": "x"}).json()["id"]
+    lst = client.post("/api/lists/", json={"name": "L"}).json()["id"]
+    for path, body in [
+        ("/api/ai/notes/summarize", {"note_id": nid}),
+        ("/api/ai/notes/continue", {"note_id": nid, "prompt": ""}),
+        ("/api/ai/notes/rewrite", {"note_id": nid, "tone": "formal"}),
+        ("/api/ai/notes/outline", {"note_id": nid}),
+        ("/api/ai/notes/extract-tasks", {"note_id": nid, "target_list_id": lst}),
+    ]:
+        resp = client.post(path, json=body)
+        assert resp.status_code == 503, f"{path} expected 503 got {resp.status_code}"

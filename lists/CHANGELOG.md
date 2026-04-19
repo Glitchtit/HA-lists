@@ -1,3 +1,12 @@
+## 0.7.0
+
+- Notes — new Obsidian-parity markdown note system (wikilinks, embeds, backlinks, callouts, KaTeX, Mermaid, code highlighting, GFM tables, clickable checklists)
+- Split-view editor (CodeMirror source + live preview) with solo toggles
+- Note-specific AI actions: summarize, continue, rewrite-in-tone, extract tasks to a list, generate outline
+- Unified sidebar: folders now hold Lists and Notes together
+- Right-side panel shows Outline + Backlinks for the active note
+- Keyboard shortcuts: Ctrl+N (new note), Ctrl+Enter (toggle preview)
+
 ## 0.6.0
 
 - PC-style right-click context menus on folders, lists, items, subtasks and tag chips
