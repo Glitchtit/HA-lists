@@ -268,3 +268,121 @@ class TestIngressStrip:
         )
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
+
+
+class TestDuplicate:
+    def _seed_list_with_content(self, client):
+        folder_id = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        list_id = client.post(
+            "/api/lists/", json={"name": "L", "folder_id": folder_id}
+        ).json()["id"]
+        item_id = client.post(
+            "/api/items/",
+            json={"list_id": list_id, "title": "It", "spiciness": 3, "priority": 2},
+        ).json()["id"]
+        client.post("/api/subtasks/", json={"item_id": item_id, "title": "s1"})
+        client.post("/api/subtasks/", json={"item_id": item_id, "title": "s2"})
+        client.post(f"/api/items/{item_id}/tags/urgent")
+        return folder_id, list_id, item_id
+
+    def test_duplicate_item_same_list(self, client):
+        _, list_id, item_id = self._seed_list_with_content(client)
+        r = client.post(f"/api/items/{item_id}/duplicate")
+        assert r.status_code == 201
+        dup = r.json()
+        assert dup["id"] != item_id
+        assert dup["list_id"] == list_id
+        assert dup["title"].endswith("(copy)")
+        assert dup["status"] == "open"
+        assert dup["spiciness"] == 3
+        assert dup["priority"] == 2
+        assert "urgent" in dup["tags"]
+        subs = client.get(f"/api/subtasks/?item_id={dup['id']}").json()
+        assert [s["title"] for s in subs] == ["s1", "s2"]
+        assert all(s["status"] == "open" for s in subs)
+
+    def test_duplicate_item_target_list(self, client):
+        _, list_id, item_id = self._seed_list_with_content(client)
+        other = client.post("/api/lists/", json={"name": "L2"}).json()["id"]
+        r = client.post(
+            f"/api/items/{item_id}/duplicate", json={"target_list_id": other}
+        )
+        assert r.status_code == 201
+        assert r.json()["list_id"] == other
+
+    def test_duplicate_item_bad_target_list(self, client):
+        _, _, item_id = self._seed_list_with_content(client)
+        r = client.post(
+            f"/api/items/{item_id}/duplicate", json={"target_list_id": 99999}
+        )
+        assert r.status_code == 400
+
+    def test_duplicate_list_same_folder(self, client):
+        folder_id, list_id, item_id = self._seed_list_with_content(client)
+        r = client.post(f"/api/lists/{list_id}/duplicate")
+        assert r.status_code == 201
+        new_list = r.json()
+        assert new_list["id"] != list_id
+        assert new_list["folder_id"] == folder_id
+        assert new_list["name"].endswith("(copy)")
+        items = client.get(f"/api/items/?list_id={new_list['id']}").json()
+        assert len(items) == 1
+        assert items[0]["id"] != item_id
+        assert "urgent" in items[0]["tags"]
+        assert len(client.get(f"/api/subtasks/?item_id={items[0]['id']}").json()) == 2
+
+    def test_duplicate_list_to_folder(self, client):
+        folder_id, list_id, _ = self._seed_list_with_content(client)
+        other = client.post("/api/folders/", json={"name": "F2"}).json()["id"]
+        r = client.post(
+            f"/api/lists/{list_id}/duplicate",
+            json={"keep_folder": False, "target_folder_id": other},
+        )
+        assert r.status_code == 201
+        assert r.json()["folder_id"] == other
+
+    def test_duplicate_list_to_unfiled(self, client):
+        _, list_id, _ = self._seed_list_with_content(client)
+        r = client.post(
+            f"/api/lists/{list_id}/duplicate",
+            json={"keep_folder": False, "target_folder_id": None},
+        )
+        assert r.status_code == 201
+        assert r.json()["folder_id"] is None
+
+    def test_duplicate_folder_deep(self, client):
+        folder_id, list_id, _ = self._seed_list_with_content(client)
+        # Add a second list in the folder.
+        client.post("/api/lists/", json={"name": "L2", "folder_id": folder_id})
+        r = client.post(f"/api/folders/{folder_id}/duplicate")
+        assert r.status_code == 201
+        new_folder = r.json()
+        assert new_folder["id"] != folder_id
+        assert new_folder["name"].endswith("(copy)")
+        new_lists = [
+            l for l in client.get("/api/lists/").json() if l["folder_id"] == new_folder["id"]
+        ]
+        assert len(new_lists) == 2
+
+
+class TestTagRenameCollision:
+    def test_rename_to_existing_name_returns_409(self, client):
+        a = client.post("/api/tags/", json={"name": "alpha"}).json()["id"]
+        client.post("/api/tags/", json={"name": "beta"})
+        r = client.patch(f"/api/tags/{a}", json={"name": "beta"})
+        assert r.status_code == 409
+
+
+class TestMoveValidation:
+    def test_move_item_to_nonexistent_list(self, client):
+        list_id = client.post("/api/lists/", json={"name": "L"}).json()["id"]
+        item_id = client.post(
+            "/api/items/", json={"list_id": list_id, "title": "X"}
+        ).json()["id"]
+        r = client.patch(f"/api/items/{item_id}", json={"list_id": 9999})
+        assert r.status_code == 400
+
+    def test_move_list_to_nonexistent_folder(self, client):
+        list_id = client.post("/api/lists/", json={"name": "L"}).json()["id"]
+        r = client.patch(f"/api/lists/{list_id}", json={"folder_id": 9999})
+        assert r.status_code == 400

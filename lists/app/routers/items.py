@@ -4,10 +4,16 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 from database import get_connection
 from models import Item, ItemCreate, ItemUpdate
 from routers._crud import apply_update
+from routers._duplicate import duplicate_item
+
+
+class ItemDuplicateBody(BaseModel):
+    target_list_id: int | None = None
 
 router = APIRouter(prefix="/api/items", tags=["items"])
 
@@ -154,6 +160,21 @@ async def delete_item(item_id: int):
     conn = get_connection()
     conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
     conn.commit()
+
+
+@router.post("/{item_id}/duplicate", response_model=Item, status_code=201)
+async def duplicate_item_endpoint(item_id: int, body: ItemDuplicateBody | None = None):
+    """Deep-copy an item (+ subtasks + tag links), optionally into another list."""
+    conn = get_connection()
+    if not conn.execute("SELECT 1 FROM items WHERE id = ?", (item_id,)).fetchone():
+        raise HTTPException(404, "Item not found")
+    body = body or ItemDuplicateBody()
+    if body.target_list_id is not None and not conn.execute(
+        "SELECT 1 FROM lists WHERE id = ?", (body.target_list_id,)
+    ).fetchone():
+        raise HTTPException(400, "target_list_id does not exist")
+    new_id = duplicate_item(conn, item_id, target_list_id=body.target_list_id)
+    return await get_item(new_id)
 
 
 # ── Tag attachment ───────────────────────────────────────────────────────────

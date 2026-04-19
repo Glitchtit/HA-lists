@@ -51,7 +51,13 @@ async def update_tag(tag_id: int, body: TagUpdate):
     if not conn.execute("SELECT 1 FROM tags WHERE id = ?", (tag_id,)).fetchone():
         raise HTTPException(404, "Tag not found")
     updates = body.model_dump(exclude_unset=True)
-    apply_update(conn, "tags", tag_id, updates, touch_updated_at=False)
+    try:
+        apply_update(conn, "tags", tag_id, updates, touch_updated_at=False)
+    except Exception as exc:
+        # SQLite UNIQUE constraint collision on the `name` column.
+        if "UNIQUE" in str(exc).upper():
+            raise HTTPException(409, "Tag name already exists") from exc
+        raise
     return await get_tag(tag_id)
 
 

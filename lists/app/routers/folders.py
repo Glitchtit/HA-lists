@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from database import get_connection
 from models import Folder, FolderCreate, FolderUpdate
 from routers._crud import apply_update, coerce_bool_cols
+from routers._duplicate import duplicate_folder
 
 router = APIRouter(prefix="/api/folders", tags=["folders"])
 
@@ -64,3 +65,13 @@ async def delete_folder(folder_id: int):
     conn = get_connection()
     conn.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
     conn.commit()
+
+
+@router.post("/{folder_id}/duplicate", response_model=Folder, status_code=201)
+async def duplicate_folder_endpoint(folder_id: int):
+    """Deep-copy the folder and everything it contains (lists, items, subtasks, tag links)."""
+    conn = get_connection()
+    if not conn.execute("SELECT 1 FROM folders WHERE id = ?", (folder_id,)).fetchone():
+        raise HTTPException(404, "Folder not found")
+    new_id = duplicate_folder(conn, folder_id)
+    return await get_folder(new_id)

@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from database import get_connection
 from models import List_, ListCreate, ListUpdate
 from routers._crud import apply_update, coerce_bool_cols
+from routers._duplicate import duplicate_list
+
+
+class ListDuplicateBody(BaseModel):
+    target_folder_id: int | None = None
+    keep_folder: bool = True  # when True (default), ignore target_folder_id
+
 
 router = APIRouter(prefix="/api/lists", tags=["lists"])
 
@@ -80,3 +88,27 @@ async def delete_list(list_id: int):
     conn = get_connection()
     conn.execute("DELETE FROM lists WHERE id = ?", (list_id,))
     conn.commit()
+
+
+@router.post("/{list_id}/duplicate", response_model=List_, status_code=201)
+async def duplicate_list_endpoint(list_id: int, body: ListDuplicateBody | None = None):
+    """Deep-copy a list (+ all items + their subtasks + tag links).
+
+    Body options:
+      - ``keep_folder=true`` (default): copy lands in the source folder.
+      - ``keep_folder=false``: copy lands in ``target_folder_id`` (``null`` = Unfiled).
+    """
+    conn = get_connection()
+    if not conn.execute("SELECT 1 FROM lists WHERE id = ?", (list_id,)).fetchone():
+        raise HTTPException(404, "List not found")
+
+    body = body or ListDuplicateBody()
+    if body.keep_folder:
+        new_id = duplicate_list(conn, list_id)
+    else:
+        if body.target_folder_id is not None and not conn.execute(
+            "SELECT 1 FROM folders WHERE id = ?", (body.target_folder_id,)
+        ).fetchone():
+            raise HTTPException(400, "target_folder_id does not exist")
+        new_id = duplicate_list(conn, list_id, target_folder_id=body.target_folder_id)
+    return await get_list(new_id)

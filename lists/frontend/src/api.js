@@ -45,6 +45,12 @@ export const toggleSubtask = (id) => api.post(`/subtasks/${id}/toggle`).then(r =
 
 export const getTags = () => api.get('/tags/').then(r => r.data);
 export const createTag = (data) => api.post('/tags/', data).then(r => r.data);
+export const updateTag = (id, data) => api.patch(`/tags/${id}`, data).then(r => r.data);
+export const deleteTag = (id) => api.delete(`/tags/${id}`);
+
+export const duplicateFolder = (id) => api.post(`/folders/${id}/duplicate`).then(r => r.data);
+export const duplicateList = (id, body) => api.post(`/lists/${id}/duplicate`, body || null).then(r => r.data);
+export const duplicateItem = (id, body) => api.post(`/items/${id}/duplicate`, body || null).then(r => r.data);
 
 export const getPersons = (includeInactive = false) =>
   api.get('/persons/', { params: { include_inactive: includeInactive } }).then(r => r.data);
