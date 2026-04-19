@@ -25,7 +25,7 @@ export default function NoteEditor({
   mode: modeProp,
   onModeChange,
 }) {
-  const [modeState, setModeState] = useState('split'); // 'split' | 'source' | 'preview'
+  const [modeState, setModeState] = useState('preview'); // 'split' | 'source' | 'preview'
   const mode = modeProp ?? modeState;
   const setMode = (m) => { if (onModeChange) onModeChange(m); else setModeState(m); };
   const [draftTitle, setDraftTitle] = useState(note?.title || '');
