@@ -1,3 +1,8 @@
+## 1.0.1
+
+- Board cards now auto-expand vertically to fit all content (height is no longer locked; ReactFlow measures natural DOM height)
+- Sticky/light-background cards get black text in preview mode and a square minimum height (minHeight = card width); textarea stays white-text on its own dark background for visibility
+
 ## 1.0.0
 
 - Fix board card checkboxes: clicking a `- [ ] task` checkbox now toggles it and saves immediately (onToggleChecklist was never wired to CardNode's NotePreview)

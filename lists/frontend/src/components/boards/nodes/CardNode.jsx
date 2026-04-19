@@ -32,6 +32,16 @@ function tintForColor(color) {
   return color;
 }
 
+function isLightColor(color) {
+  if (!color || color.startsWith('var(')) return false;
+  const hex = color.replace('#', '');
+  if (hex.length < 6) return false;
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.5;
+}
+
 function CardNode({ data, selected, id }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(data?.title || '');
@@ -51,6 +61,7 @@ function CardNode({ data, selected, id }) {
 
   const color = data?.color;
   const dotColor = color || 'var(--fg-4)';
+  const light = isLightColor(color);
 
   const save = (patch) => {
     if (data?.onUpdate) data.onUpdate(patch);
@@ -88,11 +99,12 @@ function CardNode({ data, selected, id }) {
 
   return (
     <div
-      className={`bn bn-card ${selected ? 'selected' : ''}`}
+      className={`bn bn-card ${selected ? 'selected' : ''} ${light ? 'bn-card-light' : ''}`}
       style={{
         background: tintForColor(color) || 'var(--bg-3)',
         borderLeftColor: color || 'var(--brand-cobalt)',
         position: 'relative',
+        minHeight: light ? (data?.width || 200) : undefined,
       }}
       onClick={(e) => e.stopPropagation()}
     >
