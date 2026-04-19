@@ -1,11 +1,13 @@
 """HA-lists — FastAPI application entry point."""
 
 from __future__ import annotations
+import asyncio
 import json
 import logging
 import os
 import sys
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -60,10 +62,40 @@ async def lifespan(app: FastAPI):
     db_tables = database.initialize()
     logger.info("Database ready (%d tables)", db_tables)
 
+    from routers.persons import sync_persons_from_ha
+    try:
+        persons = await sync_persons_from_ha()
+        logger.info("Synced %d persons from HA", len(persons))
+    except Exception as e:
+        logger.warning("Could not sync persons on startup: %s", e)
+
+    sync_task = asyncio.create_task(_person_sync_loop())
+
     yield
 
+    sync_task.cancel()
     database.close_connection()
     logger.info("Lists API shutdown")
+
+
+async def _person_sync_loop() -> None:
+    """Re-sync persons from HA every 6 hours."""
+    from routers.persons import sync_persons_from_ha
+
+    last_sync_hour = -1
+    while True:
+        try:
+            await asyncio.sleep(60 * 15)  # check every 15 min, sync every 6h
+            now = datetime.now()
+            if now.hour % 6 == 0 and now.hour != last_sync_hour:
+                last_sync_hour = now.hour
+                try:
+                    await sync_persons_from_ha()
+                    logger.debug("Periodic person re-sync completed")
+                except Exception as e:
+                    logger.warning("Periodic person re-sync failed: %s", e)
+        except asyncio.CancelledError:
+            break
 
 
 app = FastAPI(title="Lists", version=VERSION, lifespan=lifespan)
@@ -91,7 +123,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 
-from routers import folders, health, items, lists as lists_router, subtasks, tags
+from routers import folders, health, items, lists as lists_router, persons, subtasks, tags
 
 app.include_router(health.router)
 app.include_router(folders.router)
@@ -99,6 +131,7 @@ app.include_router(lists_router.router)
 app.include_router(items.router)
 app.include_router(subtasks.router)
 app.include_router(tags.router)
+app.include_router(persons.router)
 
 
 if __name__ == "__main__":
