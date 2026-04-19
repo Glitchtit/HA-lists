@@ -37,7 +37,7 @@ http {
         index  index.html;
 
         # ── FastAPI backend ──────────────────────────────────────────
-        location /api/ {
+        location ^~ /api/ {
             proxy_pass            http://127.0.0.1:8100;
             proxy_set_header      Host              $http_host;
             proxy_set_header      X-Real-IP         $remote_addr;
