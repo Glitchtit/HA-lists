@@ -3,6 +3,7 @@ import * as api from './api'
 import Sidebar from './components/Sidebar'
 import ItemList from './components/ItemList'
 import ItemDetail from './components/ItemDetail'
+import CompileDialog from './components/CompileDialog'
 
 export default function App() {
   const [folders, setFolders] = useState([])
@@ -12,6 +13,7 @@ export default function App() {
   const [activeListId, setActiveListId] = useState(null)
   const [activeItemId, setActiveItemId] = useState(null)
   const [error, setError] = useState(null)
+  const [compileOpen, setCompileOpen] = useState(false)
 
   async function loadTopLevel() {
     try {
@@ -58,6 +60,7 @@ export default function App() {
         activeItemId={activeItemId}
         onSelectItem={setActiveItemId}
         onRefresh={() => loadItems(activeListId)}
+        onCompile={activeList ? () => setCompileOpen(true) : null}
       />
       <ItemDetail
         itemId={activeItemId}
@@ -69,6 +72,14 @@ export default function App() {
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-red-900 text-red-100 px-3 py-2 rounded text-sm">
           {error}
         </div>
+      )}
+      {compileOpen && activeList && (
+        <CompileDialog
+          listId={activeList.id}
+          listName={activeList.name}
+          onClose={() => setCompileOpen(false)}
+          onRefresh={() => loadItems(activeListId)}
+        />
       )}
     </div>
   )

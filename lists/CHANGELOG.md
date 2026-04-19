@@ -1,3 +1,14 @@
+## 0.3.0
+
+- Goblin-Tools-style AI features powered by the HA-storage provider config
+- `POST /api/ai/breakdown` — spiciness-driven subtask breakdown (async, single-flight per-kind)
+- `POST /api/ai/estimate` — AI time estimate, writes `estimate_min`/`estimate_max` onto the item
+- `POST /api/ai/compile` — brain-dump → ordered items appended to a list (async)
+- `POST /api/ai/formalize` — rewrite text in one of five tones (formal / casual / concise / kind / firm)
+- `GET /api/ai/jobs/{task_id}` — poll async jobs for status, logs, and result
+- Frontend: ✨ Compile dialog on list header, 🪄 Break down / ⏱️ Estimate / ✏️ Formalize buttons in item detail, AI job toast for async progress
+- AI-generated subtasks are tagged in the DB (`ai_generated=1`) and re-running breakdown replaces only the AI-generated ones
+
 ## 0.2.0
 
 - Paired Home Assistant custom integration `ha_lists` at submodule root

@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react'
 import * as api from '../api'
+import AiJobToast from './AiJobToast'
+
+const TONES = ['formal', 'casual', 'concise', 'kind', 'firm']
 
 export default function ItemDetail({ itemId, persons, onChange, onClose }) {
   const [item, setItem] = useState(null)
   const [subtasks, setSubtasks] = useState([])
   const [newSub, setNewSub] = useState('')
   const [newTag, setNewTag] = useState('')
+  const [aiBusy, setAiBusy] = useState(null)
+  const [aiError, setAiError] = useState(null)
+  const [breakdownTaskId, setBreakdownTaskId] = useState(null)
+  const [tone, setTone] = useState('formal')
 
   useEffect(() => {
     if (!itemId) { setItem(null); setSubtasks([]); return }
@@ -58,6 +65,44 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
     const next = await api.detachTag(item.id, name)
     setItem({ ...item, tags: next.tags })
     onChange?.()
+  }
+
+  async function runBreakdown() {
+    setAiError(null); setAiBusy('breakdown')
+    try {
+      const { task_id } = await api.aiBreakdown(item.id, item.spiciness)
+      setBreakdownTaskId(task_id)
+    } catch (e) {
+      setAiError(e.response?.data?.detail || e.message)
+    } finally {
+      setAiBusy(null)
+    }
+  }
+
+  async function runEstimate() {
+    setAiError(null); setAiBusy('estimate')
+    try {
+      const r = await api.aiEstimate(item.id)
+      setItem({ ...item, estimate_min: r.estimate_min, estimate_max: r.estimate_max })
+      onChange?.()
+    } catch (e) {
+      setAiError(e.response?.data?.detail || e.message)
+    } finally {
+      setAiBusy(null)
+    }
+  }
+
+  async function runFormalize() {
+    if (!item.notes?.trim()) { setAiError('Nothing to formalize — notes are empty'); return }
+    setAiError(null); setAiBusy('formalize')
+    try {
+      const r = await api.aiFormalize(item.notes, tone)
+      await patch({ notes: r.text })
+    } catch (e) {
+      setAiError(e.response?.data?.detail || e.message)
+    } finally {
+      setAiBusy(null)
+    }
   }
 
   return (
@@ -152,6 +197,46 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
 
         <div>
           <span className="text-xs uppercase text-gray-400">Subtasks</span>
+          <div className="mt-1 mb-2 flex flex-wrap items-center gap-1 text-xs">
+            <button
+              onClick={runBreakdown}
+              disabled={aiBusy === 'breakdown' || !!breakdownTaskId}
+              className="px-2 py-1 bg-purple-700 rounded hover:bg-purple-600 disabled:opacity-50"
+              title="AI breakdown into subtasks at current spiciness"
+            >
+              🪄 Break down ({'🌶️'.repeat(item.spiciness)})
+            </button>
+            <button
+              onClick={runEstimate}
+              disabled={aiBusy === 'estimate'}
+              className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50"
+              title="AI time estimate"
+            >
+              ⏱️ Estimate
+              {typeof item.estimate_min === 'number' && (
+                <span className="ml-1 text-gray-300">
+                  ({item.estimate_min}–{item.estimate_max}m)
+                </span>
+              )}
+            </button>
+            <select
+              value={tone}
+              onChange={e => setTone(e.target.value)}
+              className="px-1 py-1 bg-gray-800 border border-gray-700 rounded"
+              title="Tone for formalize"
+            >
+              {TONES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <button
+              onClick={runFormalize}
+              disabled={aiBusy === 'formalize'}
+              className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50"
+              title="Rewrite notes in chosen tone"
+            >
+              ✏️ Formalize notes
+            </button>
+          </div>
+          {aiError && <div className="mb-2 text-xs text-red-400">{aiError}</div>}
           <ul className="mt-1 space-y-1">
             {subtasks.map(st => (
               <li key={st.id} className="flex items-center gap-2 text-sm">
@@ -178,6 +263,17 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
           </form>
         </div>
       </div>
+      {breakdownTaskId && (
+        <AiJobToast
+          taskId={breakdownTaskId}
+          label="Breaking down into subtasks"
+          onDone={async () => {
+            setSubtasks(await api.getSubtasks(item.id))
+            onChange?.()
+          }}
+          onDismiss={() => setBreakdownTaskId(null)}
+        />
+      )}
     </aside>
   )
 }
