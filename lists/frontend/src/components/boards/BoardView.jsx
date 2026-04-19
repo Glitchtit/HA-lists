@@ -241,10 +241,28 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   // ─ Node creation helpers ─────────────────────────────────
   const viewportCenter = useCallback(() => {
     const el = wrapperRef.current;
-    if (!el || !rf || typeof rf.project !== 'function') return { x: 0, y: 0 };
+    if (!el || !rf) return { x: 0, y: 0 };
     const rect = el.getBoundingClientRect();
-    return rf.project({ x: rect.width / 2, y: rect.height / 2 });
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    if (typeof rf.screenToFlowPosition === 'function') {
+      return rf.screenToFlowPosition({ x: cx, y: cy });
+    }
+    if (typeof rf.project === 'function') {
+      return rf.project({ x: rect.width / 2, y: rect.height / 2 });
+    }
+    return { x: 0, y: 0 };
   }, [rf]);
+
+  const projectClient = useCallback((clientX, clientY) => {
+    if (rf && typeof rf.screenToFlowPosition === 'function') {
+      return rf.screenToFlowPosition({ x: clientX, y: clientY });
+    }
+    const el = wrapperRef.current;
+    if (!el || !rf || typeof rf.project !== 'function') return viewportCenter();
+    const rect = el.getBoundingClientRect();
+    return rf.project({ x: clientX - rect.left, y: clientY - rect.top });
+  }, [rf, viewportCenter]);
 
   const insertNode = useCallback(async (payload) => {
     try {
@@ -277,6 +295,51 @@ function BoardCanvas({ boardId, onOpenEntity }) {
     const { x, y } = viewportCenter();
     insertNode({ kind: 'note', ref_id: item.id, x, y });
   }, [insertNode, viewportCenter]);
+
+  // ─ Drag & drop: toolbar / sidebar → canvas ───────────────
+  const DND_TYPE = 'application/x-ha-lists-board-node';
+
+  const handleToolbarDragStart = useCallback((e, payload) => {
+    try {
+      e.dataTransfer.setData(DND_TYPE, JSON.stringify(payload));
+      e.dataTransfer.setData('text/plain', payload.kind);
+      e.dataTransfer.effectAllowed = 'copy';
+    } catch (err) { /* ignore */ }
+  }, []);
+
+  const onCanvasDragOver = useCallback((e) => {
+    const types = e.dataTransfer?.types;
+    if (!types) return;
+    const has = Array.from(types).some((t) => t === DND_TYPE || t === 'text/plain');
+    if (!has) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const onCanvasDrop = useCallback((e) => {
+    let raw = '';
+    try { raw = e.dataTransfer.getData(DND_TYPE) || ''; } catch (err) { /* ignore */ }
+    if (!raw) {
+      // fall back to text/plain (sidebar drags)
+      let fallback = '';
+      try { fallback = e.dataTransfer.getData('text/plain') || ''; } catch (err) { /* ignore */ }
+      if (!fallback) return;
+      try { raw = fallback.startsWith('{') ? fallback : ''; } catch (err) { /* ignore */ }
+      if (!raw) return;
+    }
+    e.preventDefault();
+    let payload;
+    try { payload = JSON.parse(raw); } catch (err) { return; }
+    if (!payload?.kind) return;
+    const pos = projectClient(e.clientX, e.clientY);
+    if (payload.kind === 'card') {
+      insertNode({ kind: 'card', x: pos.x, y: pos.y, title: payload.item?.title || 'New card', body: payload.item?.body || '' });
+    } else if (payload.kind === 'list' && payload.item?.id) {
+      insertNode({ kind: 'list', ref_id: payload.item.id, x: pos.x, y: pos.y });
+    } else if (payload.kind === 'note' && payload.item?.id) {
+      insertNode({ kind: 'note', ref_id: payload.item.id, x: pos.x, y: pos.y });
+    }
+  }, [insertNode, projectClient]);
 
   // ─ Keyboard: guard Delete/Backspace when focused in input ─
   const isEditableFocused = () => {
@@ -373,13 +436,20 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   if (error) return <div className="board-error">Error: {error}</div>;
 
   return (
-    <div ref={wrapperRef} className="board-canvas" style={{ position: 'relative', height: '100%' }}>
+    <div
+      ref={wrapperRef}
+      className="board-canvas"
+      style={{ position: 'relative', height: '100%' }}
+      onDragOver={onCanvasDragOver}
+      onDrop={onCanvasDrop}
+    >
       <NodeToolbar
         onAddCard={onAddCard}
         onAddList={onAddList}
         onAddNote={onAddNote}
         connectLoose={connectLoose}
         onToggleConnect={() => setConnectLoose((v) => !v)}
+        onDragStartNew={handleToolbarDragStart}
       />
       <ReactFlow
         nodes={nodes}

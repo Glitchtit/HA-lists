@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getLists, getNotes } from '../../api';
 
-function Picker({ kind, onPick, onClose }) {
+function Picker({ kind, onPick, onClose, onDragStart }) {
   const [items, setItems] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -40,6 +40,7 @@ function Picker({ kind, onPick, onClose }) {
 
   return (
     <div ref={rootRef} className="board-picker" role="listbox">
+      <div className="board-picker-hint">Click to drop at center · drag to place</div>
       <input
         autoFocus
         className="board-picker-search"
@@ -57,10 +58,15 @@ function Picker({ kind, onPick, onClose }) {
           <button
             key={it.id}
             className="board-picker-item"
+            draggable
+            onDragStart={(e) => onDragStart(e, kind, it)}
             onClick={() => onPick(it)}
-            title={kind === 'list' ? it.name : it.title}
+            title={(kind === 'list' ? it.name : it.title) || ''}
           >
-            {kind === 'list' ? (it.name || 'Untitled list') : (it.title || 'Untitled note')}
+            <span className="board-picker-item-icon">{kind === 'list' ? '📋' : '📄'}</span>
+            <span className="board-picker-item-label">
+              {kind === 'list' ? (it.name || 'Untitled list') : (it.title || 'Untitled note')}
+            </span>
           </button>
         ))}
       </div>
@@ -68,7 +74,14 @@ function Picker({ kind, onPick, onClose }) {
   );
 }
 
-export default function NodeToolbar({ onAddCard, onAddList, onAddNote, connectLoose, onToggleConnect }) {
+export default function NodeToolbar({
+  onAddCard,
+  onAddList,
+  onAddNote,
+  connectLoose,
+  onToggleConnect,
+  onDragStartNew,
+}) {
   const [open, setOpen] = useState(null); // 'list' | 'note' | null
 
   const handlePick = (kind) => (item) => {
@@ -77,23 +90,65 @@ export default function NodeToolbar({ onAddCard, onAddList, onAddNote, connectLo
     setOpen(null);
   };
 
+  const handleDragStart = (kind, item) => (e) => {
+    onDragStartNew(e, { kind, item });
+  };
+
   return (
     <div className="board-toolbar" onClick={(e) => e.stopPropagation()}>
-      <button onClick={() => { setOpen(null); onAddCard(); }}>+ Card</button>
+      <button
+        className="board-toolbar-btn"
+        draggable
+        onDragStart={(e) => onDragStartNew(e, { kind: 'card' })}
+        onClick={() => { setOpen(null); onAddCard(); }}
+        title="Add card · click for center, drag to place"
+      >
+        <span className="board-toolbar-icon">🗒️</span>
+        <span>New card</span>
+      </button>
       <div style={{ position: 'relative' }}>
-        <button onClick={() => setOpen((v) => (v === 'list' ? null : 'list'))}>+ List</button>
-        {open === 'list' && <Picker kind="list" onPick={handlePick('list')} onClose={() => setOpen(null)} />}
+        <button
+          className="board-toolbar-btn"
+          onClick={() => setOpen((v) => (v === 'list' ? null : 'list'))}
+          title="Embed an existing list"
+        >
+          <span className="board-toolbar-icon">📋</span>
+          <span>Add list ▾</span>
+        </button>
+        {open === 'list' && (
+          <Picker
+            kind="list"
+            onPick={handlePick('list')}
+            onClose={() => setOpen(null)}
+            onDragStart={(e, kind, item) => { onDragStartNew(e, { kind, item }); setOpen(null); }}
+          />
+        )}
       </div>
       <div style={{ position: 'relative' }}>
-        <button onClick={() => setOpen((v) => (v === 'note' ? null : 'note'))}>+ Note</button>
-        {open === 'note' && <Picker kind="note" onPick={handlePick('note')} onClose={() => setOpen(null)} />}
+        <button
+          className="board-toolbar-btn"
+          onClick={() => setOpen((v) => (v === 'note' ? null : 'note'))}
+          title="Embed an existing note"
+        >
+          <span className="board-toolbar-icon">📄</span>
+          <span>Add note ▾</span>
+        </button>
+        {open === 'note' && (
+          <Picker
+            kind="note"
+            onPick={handlePick('note')}
+            onClose={() => setOpen(null)}
+            onDragStart={(e, kind, item) => { onDragStartNew(e, { kind, item }); setOpen(null); }}
+          />
+        )}
       </div>
       <button
-        className={connectLoose ? 'active' : ''}
+        className={`board-toolbar-btn ${connectLoose ? 'active' : ''}`}
         onClick={onToggleConnect}
         title="Toggle loose connection mode (drag between any handles)"
       >
-        {connectLoose ? '⇄ Connect: Loose' : '⇄ Connect: Strict'}
+        <span className="board-toolbar-icon">⇄</span>
+        <span>{connectLoose ? 'Loose connect' : 'Strict connect'}</span>
       </button>
     </div>
   );

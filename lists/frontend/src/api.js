@@ -108,7 +108,7 @@ export const updateBoardViewport = (id, viewport) =>
 
 // ── Board nodes ────────────────────────────────────────────────────────────
 export const createBoardNode = (boardId, payload) =>
-  api.post(`/boards/${boardId}/nodes/`, payload).then(r => r.data);
+  api.post(`/boards/${boardId}/nodes`, payload).then(r => r.data);
 export const updateBoardNode = (boardId, nodeId, patch) =>
   api.patch(`/boards/${boardId}/nodes/${nodeId}`, patch).then(r => r.data);
 export const deleteBoardNode = (boardId, nodeId) =>
@@ -118,7 +118,7 @@ export const bulkUpdateBoardNodePositions = (boardId, positions) =>
 
 // ── Board edges ────────────────────────────────────────────────────────────
 export const createBoardEdge = (boardId, payload) =>
-  api.post(`/boards/${boardId}/edges/`, payload).then(r => r.data);
+  api.post(`/boards/${boardId}/edges`, payload).then(r => r.data);
 export const updateBoardEdge = (boardId, edgeId, patch) =>
   api.patch(`/boards/${boardId}/edges/${edgeId}`, patch).then(r => r.data);
 export const deleteBoardEdge = (boardId, edgeId) =>
