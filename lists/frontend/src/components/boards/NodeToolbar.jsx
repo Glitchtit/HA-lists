@@ -97,6 +97,7 @@ export default function NodeToolbar({
   onUploadFiles,
   onDragStartNew,
   currentBoardId,
+  onOpenTemplates,
 }) {
   const [open, setOpen] = useState(null); // 'list' | 'note' | 'board' | null
   const fileInputRef = useRef(null);
@@ -191,6 +192,14 @@ export default function NodeToolbar({
       >
         <span className="board-toolbar-icon">📦</span>
         <span>New group</span>
+      </button>
+      <button
+        className="board-toolbar-btn"
+        onClick={() => { setOpen(null); onOpenTemplates?.(); }}
+        title="Insert a card from a template (shortcut: t)"
+      >
+        <span className="board-toolbar-icon">🧩</span>
+        <span>Templates</span>
       </button>
       <button
         className="board-toolbar-btn"

@@ -33,6 +33,7 @@ import GroupNode from './nodes/GroupNode';
 import BoardPortalNode from './nodes/BoardPortalNode';
 import NodeToolbar from './NodeToolbar';
 import BacklinksDrawer from './BacklinksDrawer';
+import TemplatePicker from './TemplatePicker';
 import './boards.css';
 
 const NODE_TYPES = {
@@ -94,6 +95,8 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   const [viewport, setViewport] = useState(null);
   const [ctxMenu, setCtxMenu] = useState(null); // {type:'node'|'edge', x, y, target}
   const [backlinksOpen, setBacklinksOpen] = useState(false);
+  const [templatePicker, setTemplatePicker] = useState(null); // {x,y,flow:{x,y}} | null
+  const cursorRef = useRef({ clientX: null, clientY: null });
 
   const rf = useReactFlow();
   const wrapperRef = useRef(null);
@@ -631,6 +634,63 @@ function BoardCanvas({ boardId, onOpenEntity }) {
     };
   }, []);
 
+  // ─ Quick capture: `t` opens template picker, `c` drops a blank card ─
+  const insertFromTemplate = useCallback((tpl, flowPos = null) => {
+    const pos = flowPos || viewportCenter();
+    return insertNode({
+      kind: 'card',
+      x: pos.x - 120,
+      y: pos.y - 60,
+      width: tpl.width || null,
+      height: tpl.height || null,
+      title: tpl.title || tpl.name || 'New card',
+      body: tpl.body_md || '',
+      color: tpl.color || null,
+    });
+  }, [insertNode, viewportCenter]);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      cursorRef.current = { clientX: e.clientX, clientY: e.clientY };
+    };
+    const el = wrapperRef.current;
+    if (!el) return undefined;
+    el.addEventListener('mousemove', onMove);
+    return () => el.removeEventListener('mousemove', onMove);
+  }, []);
+
+  useEffect(() => {
+    const onShortcut = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isEditableFocused()) return;
+      if (e.key !== 't' && e.key !== 'T' && e.key !== 'c' && e.key !== 'C') return;
+      const el = wrapperRef.current;
+      if (!el) return;
+      const { clientX, clientY } = cursorRef.current;
+      let flowPos = null;
+      if (clientX != null && clientY != null) {
+        const rect = el.getBoundingClientRect();
+        if (clientX >= rect.left && clientX <= rect.right
+            && clientY >= rect.top && clientY <= rect.bottom) {
+          flowPos = projectClient(clientX, clientY);
+        }
+      }
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        const rect = el.getBoundingClientRect();
+        const localX = (clientX ?? rect.left + 100) - rect.left;
+        const localY = (clientY ?? rect.top + 100) - rect.top;
+        setTemplatePicker({ x: localX, y: localY, flow: flowPos });
+      } else if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        const pos = flowPos || viewportCenter();
+        insertNode({ kind: 'card', x: pos.x - 120, y: pos.y - 60, title: '', body: '' });
+      }
+    };
+    window.addEventListener('keydown', onShortcut);
+    return () => window.removeEventListener('keydown', onShortcut);
+  }, [insertNode, projectClient, viewportCenter]);
+
   // ─ Context menu ──────────────────────────────────────────
   const closeCtx = useCallback(() => setCtxMenu(null), []);
   useEffect(() => {
@@ -761,6 +821,7 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         currentBoardId={boardId}
         onUploadFiles={onToolbarUpload}
         onDragStartNew={handleToolbarDragStart}
+        onOpenTemplates={() => setTemplatePicker({ x: 80, y: 60, flow: null })}
       />
       <button
         className="board-backlinks-toggle"
@@ -851,6 +912,12 @@ function BoardCanvas({ boardId, onOpenEntity }) {
           onClose={() => setBacklinksOpen(false)}
         />
       )}
+      <TemplatePicker
+        open={!!templatePicker}
+        anchor={templatePicker}
+        onPick={(tpl) => insertFromTemplate(tpl, templatePicker?.flow)}
+        onClose={() => setTemplatePicker(null)}
+      />
     </div>
   );
 }

@@ -1413,3 +1413,43 @@ class TestSearchAndBacklinks:
         bl = client.get(f"/api/notes/{nid}/board_backlinks").json()
         assert len(bl["refs"]) == 1
         assert len(bl["cards"]) == 1
+
+
+class TestBoardTemplates:
+    def test_list_includes_system_templates(self, client):
+        r = client.get("/api/board-templates/")
+        assert r.status_code == 200
+        names = [t["name"] for t in r.json()]
+        # System seed includes at least these.
+        for expected in ["Sticky", "Checklist", "Meeting note"]:
+            assert expected in names
+
+    def test_system_templates_are_read_only(self, client):
+        sys_tpl = next(t for t in client.get("/api/board-templates/").json() if t["is_system"])
+        assert client.patch(f"/api/board-templates/{sys_tpl['id']}", json={"name": "X"}).status_code == 403
+        assert client.delete(f"/api/board-templates/{sys_tpl['id']}").status_code == 403
+
+    def test_create_and_update_user_template(self, client):
+        created = client.post(
+            "/api/board-templates/",
+            json={"name": "My template", "body_md": "# Hello", "icon": "⭐"},
+        )
+        assert created.status_code == 201
+        tid = created.json()["id"]
+        patched = client.patch(f"/api/board-templates/{tid}", json={"body_md": "# Updated"})
+        assert patched.status_code == 200
+        assert patched.json()["body_md"] == "# Updated"
+
+    def test_delete_user_template(self, client):
+        tid = client.post(
+            "/api/board-templates/",
+            json={"name": "Ephemeral", "body_md": "x"},
+        ).json()["id"]
+        assert client.delete(f"/api/board-templates/{tid}").status_code == 204
+        assert client.get(f"/api/board-templates/{tid}").status_code == 404
+
+    def test_filter_by_category(self, client):
+        r = client.get("/api/board-templates/", params={"category": "basic"})
+        assert r.status_code == 200
+        for t in r.json():
+            assert t["category"] == "basic"

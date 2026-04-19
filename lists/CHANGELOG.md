@@ -1,3 +1,9 @@
+## 0.9.4
+
+- Card templates: pick from a starter library (Sticky, Checklist, Meeting note, Link bookmark, Code snippet, Quote) via the new 🧩 Templates toolbar button or press `t` on the canvas to open the picker at the cursor
+- Quick capture: press `c` on the canvas to drop a blank card at the cursor
+- User templates: create, rename, and delete your own templates through the `/api/board-templates` CRUD endpoints (system templates remain read-only)
+
 ## 0.9.3
 
 - Global search: press ⌘K / Ctrl+K anywhere to open a palette that searches boards, notes, and card bodies with FTS5 ranking and prefix matching
