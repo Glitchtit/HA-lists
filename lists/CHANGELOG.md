@@ -1,3 +1,7 @@
+## 0.9.5
+
+- Fix startup crash on upgrade (`sqlite3.OperationalError: no such column: parent_group_id`): run board_nodes column migration before executing the base SCHEMA so that indexes referencing newer columns succeed on older databases
+
 ## 0.9.4
 
 - Card templates: pick from a starter library (Sticky, Checklist, Meeting note, Link bookmark, Code snippet, Quote) via the new 🧩 Templates toolbar button or press `t` on the canvas to open the picker at the cursor
