@@ -32,6 +32,9 @@ def close_connection() -> None:
 def initialize() -> int:
     """Create tables; return the table count."""
     conn = get_connection()
+    # Run migrations BEFORE executing the base SCHEMA so that any indexes or
+    # triggers in SCHEMA referencing newly-added columns succeed on existing DBs.
+    _migrate_pre_schema(conn)
     conn.executescript(SCHEMA)
     conn.commit()
     _migrate(conn)
@@ -40,6 +43,19 @@ def initialize() -> int:
     ).fetchone()[0]
     logger.info("Database initialized with %d tables", tables)
     return tables
+
+
+def _migrate_pre_schema(conn: sqlite3.Connection) -> None:
+    """Migrations that must run before the base SCHEMA executescript.
+
+    Needed when SCHEMA contains indexes/triggers referencing columns that
+    existing databases may not yet have (e.g., board_nodes.parent_group_id).
+    """
+    exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='board_nodes'"
+    ).fetchone()
+    if exists:
+        _migrate_board_nodes(conn)
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
