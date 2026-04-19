@@ -24,7 +24,7 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [compileOpen, setCompileOpen] = useState(false)
   const [rewriteConfirm, setRewriteConfirm] = useState(null)
-  const [editorMode, setEditorMode] = useState('split') // 'split'|'source'|'preview'
+  const [editorMode, setEditorMode] = useState('preview') // 'split'|'source'|'preview'
   const [noteBodyVersion, setNoteBodyVersion] = useState(0)
 
   async function loadTopLevel() {

@@ -1,3 +1,7 @@
+## 0.8.5
+
+- Fix: notes now correctly open in Preview mode (editorMode state was in App.jsx, not NoteEditor)
+
 ## 0.8.4
 
 - Notes: default mode is now Preview (was Split) — click Source or Split in the toolbar to edit
