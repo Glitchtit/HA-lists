@@ -109,9 +109,9 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
 
   const folderMenuItems = menuFolder ? [
     { label: 'Rename', icon: '✏️', hint: 'F2', onClick: () => setEditing({ kind: 'folder', id: menuFolder.id }) },
-    { label: 'New list in folder', icon: '➕', onClick: () => setAdding(`folder-${menuFolder.id}`) },
-    { label: 'New note in folder', icon: '📝', onClick: () => setAdding(`note-folder-${menuFolder.id}`) },
-    { label: 'New board in folder', icon: '🧩', onClick: () => setAdding(`board-folder-${menuFolder.id}`) },
+    { label: 'New list in folder', icon: '📋', onClick: () => setAdding(`folder-${menuFolder.id}`) },
+    { label: 'New note in folder', icon: '📄', onClick: () => setAdding(`note-folder-${menuFolder.id}`) },
+    { label: 'New board in folder', icon: '🗂️', onClick: () => setAdding(`board-folder-${menuFolder.id}`) },
     {
       label: 'Change icon', icon: '🎨',
       children: ICON_CHOICES.map(ic => ({
@@ -347,21 +347,21 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
               className="text-ink-3 hover:text-ink-1"
               title="New list"
             >
-              +
+              📋
             </button>
             <button
               onClick={() => setAdding('note-loose')}
               className="text-ink-3 hover:text-ink-1"
               title="New note"
             >
-              📝
+              📄
             </button>
             <button
               onClick={() => setAdding('board-loose')}
               className="text-ink-3 hover:text-ink-1"
               title="New board"
             >
-              🧩
+              🗂️
             </button>
           </div>
         </div>
@@ -499,21 +499,21 @@ function FolderSection({
             className="text-ink-3 hover:text-ink-1 text-xs"
             title="New list in folder"
           >
-            +
+            📋
           </button>
           <button
             onClick={() => setAdding(noteKey)}
             className="text-ink-3 hover:text-ink-1 text-xs"
             title="New note in folder"
           >
-            📝
+            📄
           </button>
           <button
             onClick={() => setAdding(boardKey)}
             className="text-ink-3 hover:text-ink-1 text-xs"
             title="New board in folder"
           >
-            🧩
+            🗂️
           </button>
         </div>
       </div>
