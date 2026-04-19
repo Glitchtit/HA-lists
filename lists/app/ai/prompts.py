@@ -95,3 +95,74 @@ def formalize_prompt(text: str, tone: str) -> str:
 
 def available_tones() -> list[str]:
     return list(_TONES.keys())
+
+
+# ── Notes prompts ─────────────────────────────────────────────────────────────
+
+_LANG_RULE = (
+    "Match the language of the input. Do not translate."
+)
+
+
+def note_summarize_prompt(body: str) -> str:
+    return (
+        "You summarize personal notes. Produce a 3–5 sentence tl;dr that "
+        "preserves the key points.\n\n"
+        f"{_LANG_RULE}\n\n"
+        f"Note body:\n{(body or '').strip()}\n\n"
+        "Reply with this exact JSON shape and nothing else:\n"
+        '{"summary": "…"}'
+    )
+
+
+def note_continue_prompt(body: str, user_prompt: str) -> str:
+    hint = (user_prompt or "").strip()
+    hint_block = f"\nUser hint: {hint}" if hint else ""
+    return (
+        "You continue writing from where a personal note leaves off. Pick up "
+        "the thread naturally — do not repeat earlier content or add headings. "
+        "Produce roughly 1–3 short paragraphs.\n\n"
+        f"{_LANG_RULE}\n\n"
+        f"Note body so far:\n{(body or '').strip()}{hint_block}\n\n"
+        "Reply with this exact JSON shape and nothing else:\n"
+        '{"continuation": "…"}'
+    )
+
+
+def note_rewrite_prompt(body: str, tone: str) -> str:
+    tone_key = (tone or "formal").lower().strip()
+    description = _TONES.get(tone_key, _TONES["formal"])
+    return (
+        f"Rewrite the following note in a {tone_key} tone: {description}. "
+        "Preserve meaning and structure (headings, bullet points, code blocks). "
+        "Do not add new information.\n\n"
+        f"{_LANG_RULE}\n\n"
+        f"Original note:\n{(body or '').strip()}\n\n"
+        "Reply with this exact JSON shape and nothing else:\n"
+        '{"body": "…"}'
+    )
+
+
+def note_extract_tasks_prompt(body: str) -> str:
+    return (
+        "Extract actionable tasks from the following personal note. Ignore "
+        "background context, opinions, and purely informational sentences. "
+        "Each task should be a concrete next action the author could take.\n\n"
+        f"{_LANG_RULE}\n\n"
+        f"Note body:\n{(body or '').strip()}\n\n"
+        "Reply with this exact JSON shape and nothing else:\n"
+        '{"tasks": [{"title": "…", "notes": "optional"}, ...]}\n'
+        "`notes` is optional (omit if not useful). Each title <80 chars."
+    )
+
+
+def note_outline_prompt(body: str) -> str:
+    return (
+        "Produce a tight markdown outline of the following note. Use `##` for "
+        "sections and `- ` for bullets. Keep only what structures the content; "
+        "do not invent new information.\n\n"
+        f"{_LANG_RULE}\n\n"
+        f"Note body:\n{(body or '').strip()}\n\n"
+        "Reply with this exact JSON shape and nothing else:\n"
+        '{"outline": "## Heading\\n- bullet\\n..."}'
+    )

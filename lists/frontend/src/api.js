@@ -67,3 +67,30 @@ export const aiCompile = (listId, brainDump) =>
 export const aiFormalize = (text, tone) =>
   api.post('/ai/formalize', { text, tone }).then(r => r.data);
 export const getAiJob = (taskId) => api.get(`/ai/jobs/${taskId}`).then(r => r.data);
+
+// ── Notes ──────────────────────────────────────────────────────────────────
+export const getNotes = (params = {}) =>
+  api.get('/notes/', { params }).then(r => r.data);
+export const getNote = (id) => api.get(`/notes/${id}`).then(r => r.data);
+export const createNote = (data) => api.post('/notes/', data).then(r => r.data);
+export const updateNote = (id, data) => api.patch(`/notes/${id}`, data).then(r => r.data);
+export const deleteNote = (id) => api.delete(`/notes/${id}`);
+export const duplicateNote = (id) => api.post(`/notes/${id}/duplicate`).then(r => r.data);
+export const getBacklinks = (id) => api.get(`/notes/${id}/backlinks`).then(r => r.data);
+export const resolveNote = (title) =>
+  api.get('/notes/resolve', { params: { title } }).then(r => r.data).catch(e => {
+    if (e.response?.status === 404) return null;
+    throw e;
+  });
+
+// ── AI note actions ────────────────────────────────────────────────────────
+export const aiNoteSummarize    = (noteId) =>
+  api.post('/ai/notes/summarize', { note_id: noteId }).then(r => r.data);
+export const aiNoteContinue     = (noteId, prompt = '') =>
+  api.post('/ai/notes/continue', { note_id: noteId, prompt }).then(r => r.data);
+export const aiNoteRewrite      = (noteId, tone) =>
+  api.post('/ai/notes/rewrite', { note_id: noteId, tone }).then(r => r.data);
+export const aiNoteExtractTasks = (noteId, targetListId) =>
+  api.post('/ai/notes/extract-tasks', { note_id: noteId, target_list_id: targetListId }).then(r => r.data);
+export const aiNoteOutline      = (noteId) =>
+  api.post('/ai/notes/outline', { note_id: noteId }).then(r => r.data);
