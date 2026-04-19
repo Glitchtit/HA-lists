@@ -1,3 +1,7 @@
+## 0.9.6
+
+- Fix context menus: Change icon and Move to folder submenus are now reachable and their items can be clicked (fixed hover race + mousedown-before-click race with portaled submenus)
+
 ## 0.9.5
 
 - Fix startup crash on upgrade (`sqlite3.OperationalError: no such column: parent_group_id`): run board_nodes column migration before executing the base SCHEMA so that indexes referencing newer columns succeed on older databases
