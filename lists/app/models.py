@@ -378,3 +378,42 @@ class BoardDetail(BaseModel):
     board: Board
     nodes: list[BoardNode]
     edges: list[BoardEdge]
+
+
+# ── Board templates ───────────────────────────────────────────────────────────
+
+
+class BoardTemplate(BaseModel):
+    id: int
+    name: str
+    icon: str = "🗒️"
+    color: str = ""
+    title: str = ""
+    body_md: str = ""
+    width: float = 240
+    height: float = 160
+    category: str = "general"
+    is_system: bool = False
+    sort_order: int = 0
+
+
+class BoardTemplateCreate(BaseModel):
+    name: str
+    icon: str = "🗒️"
+    color: str = ""
+    title: str = ""
+    body_md: str = ""
+    width: float = 240
+    height: float = 160
+    category: str = "general"
+
+
+class BoardTemplateUpdate(BaseModel):
+    name: str | None = None
+    icon: str | None = None
+    color: str | None = None
+    title: str | None = None
+    body_md: str | None = None
+    width: float | None = None
+    height: float | None = None
+    category: str | None = None
