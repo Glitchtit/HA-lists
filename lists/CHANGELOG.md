@@ -1,3 +1,11 @@
+## 0.8.2
+
+- Boards: fix "+ Card / List / Note" buttons not adding anything (trailing-slash mismatch between frontend and FastAPI routes)
+- Boards: drag nodes from the toolbar to place them exactly, or click to drop at viewport center
+- Boards: drag lists and notes straight from the sidebar onto the board canvas
+- Boards: clearer toolbar iconography (🗒️ card / 📋 list / 📄 note / ⇄ connect) with labels
+- Boards: use `screenToFlowPosition` for accurate drop coordinates under pan/zoom
+
 ## 0.8.1
 
 - Sidebar: consistent icons for new list (📋), note (📄) and board (🗂️) creation buttons — replaces ambiguous bare +

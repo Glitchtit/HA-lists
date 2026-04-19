@@ -600,9 +600,20 @@ function FolderSection({
 }
 
 function ListRow({ list, active, onClick, onContextMenu, editing, onCommitRename, onCancelRename }) {
+  const onDragStart = (e) => {
+    if (editing) return;
+    try {
+      const payload = JSON.stringify({ kind: 'list', item: { id: list.id, name: list.name } });
+      e.dataTransfer.setData('application/x-ha-lists-board-node', payload);
+      e.dataTransfer.setData('text/plain', payload);
+      e.dataTransfer.effectAllowed = 'copy';
+    } catch (err) { /* ignore */ }
+  };
   return (
     <div
       onContextMenu={onContextMenu}
+      draggable={!editing}
+      onDragStart={onDragStart}
       className={`w-full flex items-center gap-1 px-2 py-1.5 rounded text-sm ${
         active ? 'bg-brand-cobalt text-white' : 'text-ink-2 hover:bg-surface-3'
       } ${editing ? '' : 'cursor-pointer'}`}
@@ -625,9 +636,20 @@ function ListRow({ list, active, onClick, onContextMenu, editing, onCommitRename
 }
 
 function NoteRow({ note, active, onClick, onContextMenu, editing, onCommitRename, onCancelRename }) {
+  const onDragStart = (e) => {
+    if (editing) return;
+    try {
+      const payload = JSON.stringify({ kind: 'note', item: { id: note.id, title: note.title } });
+      e.dataTransfer.setData('application/x-ha-lists-board-node', payload);
+      e.dataTransfer.setData('text/plain', payload);
+      e.dataTransfer.effectAllowed = 'copy';
+    } catch (err) { /* ignore */ }
+  };
   return (
     <div
       onContextMenu={onContextMenu}
+      draggable={!editing}
+      onDragStart={onDragStart}
       className={`w-full flex items-center gap-1 px-2 py-1.5 rounded text-sm ${
         active ? 'bg-brand-cobalt text-white' : 'text-ink-2 hover:bg-surface-3'
       } ${editing ? '' : 'cursor-pointer'}`}
