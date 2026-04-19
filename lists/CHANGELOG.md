@@ -1,3 +1,7 @@
+## 1.0.0
+
+- Fix board card checkboxes: clicking a `- [ ] task` checkbox now toggles it and saves immediately (onToggleChecklist was never wired to CardNode's NotePreview)
+
 ## 0.9.9
 
 - Drag & drop lists, notes, and boards between folders in the sidebar; drop on a folder to move into it, drop on the Unfiled section to remove from all folders; drop targets highlight with a blue ring on hover
