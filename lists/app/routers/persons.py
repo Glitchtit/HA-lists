@@ -12,8 +12,8 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
+import ha_client
 from database import get_connection
-from ha_client import get_persons as ha_get_persons
 from models import Person
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ async def sync_persons_from_ha() -> list[dict]:
     We soft-deactivate (active=0) rather than delete so that items previously
     assigned to a person still resolve cleanly via FK.
     """
-    ha_persons = await ha_get_persons()
+    ha_persons = await ha_client.get_persons()
     conn = get_connection()
     for p in ha_persons:
         conn.execute(
