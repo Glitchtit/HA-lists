@@ -1,0 +1,337 @@
+/* ============================================================
+   Boards canvas — reactflow customisations + node styling
+   Dark-theme first; uses design tokens from design-tokens.css.
+   ============================================================ */
+
+.board-canvas {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-1);
+}
+
+/* reactflow overrides */
+.board-canvas .react-flow__background {
+  background-color: var(--bg-1);
+}
+.board-canvas .react-flow__controls {
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.board-canvas .react-flow__controls-button {
+  background: var(--bg-2);
+  color: var(--fg-2);
+  border-bottom: 1px solid var(--line-1);
+}
+.board-canvas .react-flow__controls-button:hover {
+  background: var(--bg-3);
+  color: var(--fg-1);
+}
+.board-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+}
+.board-canvas .react-flow__minimap {
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-md);
+}
+.board-canvas .react-flow__edge-path {
+  stroke: var(--fg-3);
+  stroke-width: 1.5;
+}
+.board-canvas .react-flow__edge.selected .react-flow__edge-path,
+.board-canvas .react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--brand-cobalt-400);
+  stroke-width: 2;
+}
+.board-canvas .react-flow__handle {
+  background: var(--brand-cobalt-400);
+  border: 2px solid var(--bg-1);
+  width: 10px;
+  height: 10px;
+}
+.board-canvas .react-flow__attribution {
+  background: transparent;
+  color: var(--fg-4);
+}
+
+/* ── Generic node shell ─────────────────────────────────── */
+.bn {
+  min-width: 200px;
+  max-width: 280px;
+  background: var(--bg-2);
+  color: var(--fg-1);
+  border: 1px solid var(--line-1);
+  border-left: 3px solid var(--brand-cobalt);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+}
+.bn:hover { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4); }
+.bn.selected { box-shadow: 0 0 0 2px var(--brand-cobalt-400); }
+
+.bn-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--line-1);
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.bn-header-icon { font-size: 14px; line-height: 1; }
+.bn-header-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bn-body { padding: 8px 10px; color: var(--fg-2); }
+.bn-footer {
+  padding: 6px 10px;
+  font-size: var(--fs-xs);
+  color: var(--fg-3);
+  border-top: 1px solid var(--line-2);
+}
+
+.bn-progress {
+  height: 6px;
+  background: var(--bg-1);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.bn-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand-cobalt-400), var(--brand-cobalt-300));
+  transition: width 180ms ease;
+}
+
+.bn-tombstone {
+  border-color: var(--danger);
+  border-left-color: var(--danger);
+  background: var(--danger-bg);
+}
+.bn-tombstone .bn-header { background: var(--danger-bg); color: var(--danger); }
+
+/* ── Note node body ─────────────────────────────────────── */
+.bn-note-body {
+  max-height: 160px;
+  overflow: hidden;
+  position: relative;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+}
+.bn-note-body::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 32px;
+  background: linear-gradient(180deg, transparent, var(--bg-2));
+  pointer-events: none;
+}
+
+/* ── Card node ──────────────────────────────────────────── */
+.bn-card {
+  background: var(--bg-3);
+  min-width: 220px;
+  max-width: 300px;
+}
+.bn-card input.bn-card-title {
+  flex: 1;
+  background: transparent;
+  color: var(--fg-1);
+  border: none;
+  outline: none;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  min-width: 0;
+}
+.bn-card input.bn-card-title:focus {
+  outline: 1px solid var(--brand-cobalt-400);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.bn-card textarea.bn-card-body {
+  width: 100%;
+  min-height: 80px;
+  max-height: 240px;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
+  font: inherit;
+  resize: vertical;
+  outline: none;
+}
+.bn-card textarea.bn-card-body:focus { border-color: var(--brand-cobalt-400); }
+.bn-card-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  flex: none;
+}
+
+.bn-color-popover {
+  position: absolute;
+  top: 30px;
+  right: 6px;
+  display: grid;
+  grid-template-columns: repeat(6, 16px);
+  gap: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-sm);
+  padding: 6px;
+  z-index: 10;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.bn-color-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+/* ── Floating toolbar ───────────────────────────────────── */
+.board-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-md);
+  padding: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.board-toolbar button {
+  background: var(--bg-3);
+  color: var(--fg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-sm);
+  padding: 4px 10px;
+  font-size: var(--fs-sm);
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.board-toolbar button:hover {
+  background: var(--bg-4);
+  border-color: var(--brand-cobalt-400);
+}
+.board-toolbar button.active {
+  background: var(--brand-cobalt);
+  border-color: var(--brand-cobalt-400);
+  color: var(--fg-1);
+}
+
+.board-picker {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  width: 260px;
+  max-height: 320px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-md);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 20;
+}
+.board-picker input.board-picker-search {
+  background: var(--bg-1);
+  color: var(--fg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
+  outline: none;
+  font: inherit;
+}
+.board-picker input.board-picker-search:focus { border-color: var(--brand-cobalt-400); }
+.board-picker-list {
+  overflow-y: auto;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+}
+.board-picker-item {
+  background: transparent;
+  color: var(--fg-2);
+  border: none;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.board-picker-item:hover { background: var(--bg-3); color: var(--fg-1); }
+.board-picker-empty {
+  color: var(--fg-3);
+  font-size: var(--fs-xs);
+  padding: 6px 8px;
+}
+
+/* ── Context menu ───────────────────────────────────────── */
+.board-ctx-menu {
+  position: fixed;
+  min-width: 180px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+.board-ctx-menu button {
+  background: transparent;
+  color: var(--fg-1);
+  border: none;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+.board-ctx-menu button:hover { background: var(--bg-3); }
+.board-ctx-menu button.danger { color: var(--danger); }
+.board-ctx-menu button.danger:hover { background: var(--danger-bg); }
+.board-ctx-menu hr {
+  border: none;
+  border-top: 1px solid var(--line-2);
+  margin: 4px 0;
+}
+
+.board-loading,
+.board-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--fg-3);
+  font-size: var(--fs-sm);
+}
+.board-error { color: var(--danger); }

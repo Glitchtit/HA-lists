@@ -150,4 +150,48 @@ CREATE TABLE IF NOT EXISTS note_links (
     UNIQUE(source_note_id, target_title, link_type)
 );
 CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_title);
+
+CREATE TABLE IF NOT EXISTS boards (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    folder_id   INTEGER REFERENCES folders(id) ON DELETE SET NULL,
+    name        TEXT    NOT NULL,
+    icon        TEXT    DEFAULT '🧩',
+    color       TEXT    DEFAULT '',
+    pinned      INTEGER DEFAULT 0,
+    archived    INTEGER DEFAULT 0,
+    sort_order  INTEGER DEFAULT 0,
+    viewport    TEXT    DEFAULT '{"x":0,"y":0,"zoom":1}',
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_boards_folder ON boards(folder_id);
+
+CREATE TABLE IF NOT EXISTS board_nodes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id   INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL CHECK (kind IN ('list','note','card')),
+    ref_id     INTEGER,
+    title      TEXT    DEFAULT '',
+    body       TEXT    DEFAULT '',
+    color      TEXT    DEFAULT '',
+    x          REAL    NOT NULL DEFAULT 0,
+    y          REAL    NOT NULL DEFAULT 0,
+    width      REAL    NOT NULL DEFAULT 240,
+    height     REAL    NOT NULL DEFAULT 160,
+    z          INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_board_nodes_board ON board_nodes(board_id);
+
+CREATE TABLE IF NOT EXISTS board_edges (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id        INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    source_node_id  INTEGER NOT NULL REFERENCES board_nodes(id) ON DELETE CASCADE,
+    target_node_id  INTEGER NOT NULL REFERENCES board_nodes(id) ON DELETE CASCADE,
+    label           TEXT    DEFAULT '',
+    style           TEXT    DEFAULT 'default',
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_board_edges_board ON board_edges(board_id);
 """

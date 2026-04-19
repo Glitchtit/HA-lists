@@ -1,3 +1,13 @@
+## 0.8.0
+
+- Boards: infinite-canvas workspace (reactflow) with List, Note and Card nodes
+- Boards: connect nodes with directional edges; bulk-move autosave
+- Boards: right-click context menu for nodes/edges; keyboard delete with input guard
+- Boards: tombstone rendering when a referenced list or note has been deleted
+- Boards: pan/zoom viewport persisted per board
+- Sidebar: boards listed per folder with full context menu (rename, duplicate, move, pin, archive, delete)
+- API: new /api/boards endpoints (CRUD, duplicate, bulk positions, viewport, nodes, edges)
+
 ## 0.7.0
 
 - Notes — new Obsidian-parity markdown note system (wikilinks, embeds, backlinks, callouts, KaTeX, Mermaid, code highlighting, GFM tables, clickable checklists)
