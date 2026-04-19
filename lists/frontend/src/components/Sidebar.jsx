@@ -17,6 +17,7 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
   const [menu, setMenu] = useState(null)           // { kind, id, x, y }
   const [confirm, setConfirm] = useState(null)
   const [editing, setEditing] = useState(null)     // { kind, id }
+  const [dragOver, setDragOver] = useState(null)   // folder id | 'unfiled' | null
 
   async function addFolder(e) {
     e.preventDefault()
@@ -97,6 +98,38 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
     setMenu({ kind, id, x: e.clientX, y: e.clientY })
   }
   function closeMenu() { setMenu(null) }
+
+  // Returns drag-over/drop props for a given target folder (null = Unfiled).
+  function makeDrop(targetFolderId) {
+    const key = targetFolderId ?? 'unfiled'
+    return {
+      isDragOver: dragOver === key,
+      onDragOver(e) {
+        if (!e.dataTransfer.types.includes('application/x-ha-lists-sidebar-item')) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        setDragOver(key)
+      },
+      onDragLeave(e) {
+        if (e.currentTarget.contains(e.relatedTarget)) return
+        setDragOver(null)
+      },
+      async onDrop(e) {
+        e.preventDefault()
+        setDragOver(null)
+        let data
+        try { data = JSON.parse(e.dataTransfer.getData('application/x-ha-lists-sidebar-item')) } catch { return }
+        const { kind, id, folder_id: currentFolder } = data
+        const target = targetFolderId ?? null
+        if ((target ?? null) === (currentFolder ?? null)) return
+        if (kind === 'list') await api.updateList(id, { folder_id: target })
+        else if (kind === 'note') await api.updateNote(id, { folder_id: target })
+        else if (kind === 'board') await api.updateBoard(id, { folder_id: target })
+        onRefresh()
+      },
+    }
+  }
+
 
   const activeListId = activeEntity?.kind === 'list' ? activeEntity.id : null
   const activeNoteId = activeEntity?.kind === 'note' ? activeEntity.id : null
@@ -335,10 +368,19 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
           editing={editing}
           setEditing={setEditing}
           onRefresh={onRefresh}
+          {...makeDrop(folder.id)}
         />
       ))}
 
-      <div className="mt-4">
+      {(() => {
+        const dp = makeDrop(null)
+        return (
+        <div
+          className={`mt-4 rounded transition-colors ${dp.isDragOver ? 'ring-1 ring-brand-cobalt/50 bg-brand-cobalt/5' : ''}`}
+          onDragOver={dp.onDragOver}
+          onDragLeave={dp.onDragLeave}
+          onDrop={dp.onDrop}
+        >
         <div className="flex items-center justify-between text-xs uppercase text-ink-4 mb-1">
           <span>Unfiled</span>
           <div className="flex items-center gap-1">
@@ -444,6 +486,8 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
           />
         ))}
       </div>
+        )
+      })()}
 
       <ContextMenu
         open={!!menu}
@@ -471,13 +515,19 @@ function FolderSection({
   newListName, setNewListName, newNoteTitle, setNewNoteTitle, newBoardName, setNewBoardName,
   addList, addNote, addBoard,
   onFolderMenu, onListMenu, onNoteMenu, onBoardMenu, editing, setEditing, onRefresh,
+  isDragOver, onDragOver, onDragLeave, onDrop,
 }) {
   const listKey = `folder-${folder.id}`
   const noteKey = `note-folder-${folder.id}`
   const boardKey = `board-folder-${folder.id}`
   const isEditing = editing?.kind === 'folder' && editing.id === folder.id
   return (
-    <div className="mb-3">
+    <div
+      className={`mb-3 rounded transition-colors ${isDragOver ? 'ring-1 ring-brand-cobalt/50 bg-brand-cobalt/5' : ''}`}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <div
         className="flex items-center justify-between text-sm font-medium text-ink-2 mb-1 rounded px-1 py-0.5 hover:bg-surface-3"
         onContextMenu={onFolderMenu}
@@ -603,10 +653,12 @@ function ListRow({ list, active, onClick, onContextMenu, editing, onCommitRename
   const onDragStart = (e) => {
     if (editing) return;
     try {
-      const payload = JSON.stringify({ kind: 'list', item: { id: list.id, name: list.name } });
-      e.dataTransfer.setData('application/x-ha-lists-board-node', payload);
-      e.dataTransfer.setData('text/plain', payload);
-      e.dataTransfer.effectAllowed = 'copy';
+      const sidebarPayload = JSON.stringify({ kind: 'list', id: list.id, folder_id: list.folder_id ?? null });
+      const boardPayload = JSON.stringify({ kind: 'list', item: { id: list.id, name: list.name } });
+      e.dataTransfer.setData('application/x-ha-lists-sidebar-item', sidebarPayload);
+      e.dataTransfer.setData('application/x-ha-lists-board-node', boardPayload);
+      e.dataTransfer.setData('text/plain', boardPayload);
+      e.dataTransfer.effectAllowed = 'copyMove';
     } catch (err) { /* ignore */ }
   };
   return (
@@ -639,10 +691,12 @@ function NoteRow({ note, active, onClick, onContextMenu, editing, onCommitRename
   const onDragStart = (e) => {
     if (editing) return;
     try {
-      const payload = JSON.stringify({ kind: 'note', item: { id: note.id, title: note.title } });
-      e.dataTransfer.setData('application/x-ha-lists-board-node', payload);
-      e.dataTransfer.setData('text/plain', payload);
-      e.dataTransfer.effectAllowed = 'copy';
+      const sidebarPayload = JSON.stringify({ kind: 'note', id: note.id, folder_id: note.folder_id ?? null });
+      const boardPayload = JSON.stringify({ kind: 'note', item: { id: note.id, title: note.title } });
+      e.dataTransfer.setData('application/x-ha-lists-sidebar-item', sidebarPayload);
+      e.dataTransfer.setData('application/x-ha-lists-board-node', boardPayload);
+      e.dataTransfer.setData('text/plain', boardPayload);
+      e.dataTransfer.effectAllowed = 'copyMove';
     } catch (err) { /* ignore */ }
   };
   return (
@@ -678,7 +732,8 @@ function BoardRow({ board, active, onClick, onContextMenu, editing, onCommitRena
   const onDragStart = (e) => {
     if (editing) return;
     try {
-      const payload = JSON.stringify({
+      const sidebarPayload = JSON.stringify({ kind: 'board', id: board.id, folder_id: board.folder_id ?? null });
+      const boardPayload = JSON.stringify({
         kind: 'board',
         item: {
           id: board.id,
@@ -688,9 +743,10 @@ function BoardRow({ board, active, onClick, onContextMenu, editing, onCommitRena
           updated_at: board.updated_at,
         },
       });
-      e.dataTransfer.setData('application/x-ha-lists-board-node', payload);
-      e.dataTransfer.setData('text/plain', payload);
-      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('application/x-ha-lists-sidebar-item', sidebarPayload);
+      e.dataTransfer.setData('application/x-ha-lists-board-node', boardPayload);
+      e.dataTransfer.setData('text/plain', boardPayload);
+      e.dataTransfer.effectAllowed = 'copyMove';
     } catch (err) { /* ignore */ }
   };
   return (

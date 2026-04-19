@@ -1,3 +1,7 @@
+## 0.9.9
+
+- Drag & drop lists, notes, and boards between folders in the sidebar; drop on a folder to move into it, drop on the Unfiled section to remove from all folders; drop targets highlight with a blue ring on hover
+
 ## 0.9.8
 
 - Fix: dragging a card out of a group frame now clears its group membership (parent_group_id was never set to null when dropped outside all groups)
