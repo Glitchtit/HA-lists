@@ -1,3 +1,12 @@
+## 0.4.0
+
+- Design-system polish: apply GlitchyRee tokens (International Orange + Cobalt Blue) across the frontend
+- Self-host Space Grotesk / Inter / JetBrains Mono via `public/fonts/` + `src/styles/design-tokens.css`
+- Tailwind extended with `brand.*`, `surface.*`, `ink.*`, `semantic.*` colour tokens
+- Spiciness slider gets a custom orange→gold gradient track with a glowing thumb
+- AI job toast uses cobalt + shimmer animation; compile/detail dialogs use 2xl radii and brand glows
+- Sidebar and list headers switch to the Space Grotesk display face
+
 ## 0.3.0
 
 - Goblin-Tools-style AI features powered by the HA-storage provider config

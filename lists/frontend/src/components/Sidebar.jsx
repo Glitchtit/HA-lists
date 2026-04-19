@@ -34,12 +34,12 @@ export default function Sidebar({ folders, lists, activeListId, onSelectList, on
   }
 
   return (
-    <aside className="w-full md:w-64 bg-gray-800 border-r border-gray-700 p-4 overflow-y-auto">
+    <aside className="w-full md:w-64 bg-surface-2 border-r border-line-1 p-4 overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">Lists</h1>
+        <h1 className="text-xl font-display font-bold tracking-tight">📋 Lists</h1>
         <button
           onClick={() => setAdding('folder')}
-          className="text-sm text-gray-400 hover:text-white"
+          className="text-sm text-ink-3 hover:text-white"
           title="New folder"
         >
           + folder
@@ -53,9 +53,9 @@ export default function Sidebar({ folders, lists, activeListId, onSelectList, on
             value={newFolderName}
             onChange={e => setNewFolderName(e.target.value)}
             placeholder="Folder name"
-            className="flex-1 px-2 py-1 text-sm bg-gray-700 rounded"
+            className="flex-1 px-2 py-1 text-sm bg-surface-3 rounded"
           />
-          <button className="px-2 text-sm bg-blue-600 rounded hover:bg-blue-500">Add</button>
+          <button className="px-2 text-sm bg-brand-cobalt rounded hover:bg-brand-cobalt-400">Add</button>
         </form>
       )}
 
@@ -75,11 +75,11 @@ export default function Sidebar({ folders, lists, activeListId, onSelectList, on
       ))}
 
       <div className="mt-4">
-        <div className="flex items-center justify-between text-xs uppercase text-gray-500 mb-1">
+        <div className="flex items-center justify-between text-xs uppercase text-ink-4 mb-1">
           <span>Unfiled</span>
           <button
             onClick={() => setAdding('loose')}
-            className="text-gray-400 hover:text-white"
+            className="text-ink-3 hover:text-white"
             title="New list"
           >
             +
@@ -92,9 +92,9 @@ export default function Sidebar({ folders, lists, activeListId, onSelectList, on
               value={newListName}
               onChange={e => setNewListName(e.target.value)}
               placeholder="List name"
-              className="flex-1 px-2 py-1 text-sm bg-gray-700 rounded"
+              className="flex-1 px-2 py-1 text-sm bg-surface-3 rounded"
             />
-            <button className="px-2 text-sm bg-blue-600 rounded hover:bg-blue-500">Add</button>
+            <button className="px-2 text-sm bg-brand-cobalt rounded hover:bg-brand-cobalt-400">Add</button>
           </form>
         )}
         {looseLists.map(list => (
@@ -114,11 +114,11 @@ function FolderSection({ folder, lists, activeListId, onSelectList, adding, setA
   const key = `folder-${folder.id}`
   return (
     <div className="mb-3">
-      <div className="flex items-center justify-between text-sm font-medium text-gray-300 mb-1">
+      <div className="flex items-center justify-between text-sm font-medium text-ink-2 mb-1">
         <span>{folder.icon || '📁'} {folder.name}</span>
         <button
           onClick={() => setAdding(key)}
-          className="text-gray-400 hover:text-white text-xs"
+          className="text-ink-3 hover:text-white text-xs"
           title="New list in folder"
         >
           +
@@ -131,9 +131,9 @@ function FolderSection({ folder, lists, activeListId, onSelectList, adding, setA
             value={newListName}
             onChange={e => setNewListName(e.target.value)}
             placeholder="List name"
-            className="flex-1 px-2 py-1 text-sm bg-gray-700 rounded"
+            className="flex-1 px-2 py-1 text-sm bg-surface-3 rounded"
           />
-          <button className="px-2 text-sm bg-blue-600 rounded hover:bg-blue-500">Add</button>
+          <button className="px-2 text-sm bg-brand-cobalt rounded hover:bg-brand-cobalt-400">Add</button>
         </form>
       )}
       {lists.map(l => (
@@ -153,7 +153,7 @@ function ListRow({ list, active, onClick }) {
     <button
       onClick={onClick}
       className={`w-full text-left px-2 py-1.5 rounded text-sm truncate ${
-        active ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'
+        active ? 'bg-brand-cobalt text-white' : 'text-ink-2 hover:bg-surface-3'
       }`}
     >
       {list.icon || '📝'} {list.name}

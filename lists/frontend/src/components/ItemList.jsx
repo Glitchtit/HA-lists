@@ -21,7 +21,7 @@ export default function ItemList({ list, items, activeItemId, onSelectItem, onRe
 
   if (!list) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="flex-1 flex items-center justify-center text-ink-4">
         Pick a list on the left, or create one.
       </div>
     )
@@ -30,22 +30,22 @@ export default function ItemList({ list, items, activeItemId, onSelectItem, onRe
   const visible = showCompleted ? items : items.filter(i => i.status !== 'completed')
 
   return (
-    <section className="flex-1 flex flex-col border-r border-gray-700 min-w-0">
-      <header className="p-4 border-b border-gray-700 flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold truncate">
+    <section className="flex-1 flex flex-col border-r border-line-1 min-w-0">
+      <header className="p-4 border-b border-line-1 flex items-center justify-between gap-2 bg-surface-1/80 backdrop-blur-md">
+        <h2 className="text-lg font-semibold truncate font-display tracking-tight">
           {list.icon || '📝'} {list.name}
         </h2>
         <div className="flex items-center gap-2">
           {onCompile && (
             <button
               onClick={onCompile}
-              className="px-2 py-1 text-xs bg-purple-700 rounded hover:bg-purple-600"
+              className="px-2 py-1 text-xs bg-brand-orange rounded hover:bg-brand-orange-400"
               title="Brain-dump → items (AI compile)"
             >
               ✨ Compile
             </button>
           )}
-          <label className="text-xs text-gray-400 flex items-center gap-1">
+          <label className="text-xs text-ink-3 flex items-center gap-1">
             <input
               type="checkbox"
               checked={showCompleted}
@@ -56,24 +56,24 @@ export default function ItemList({ list, items, activeItemId, onSelectItem, onRe
         </div>
       </header>
 
-      <form onSubmit={addItem} className="p-4 border-b border-gray-700">
+      <form onSubmit={addItem} className="p-4 border-b border-line-1">
         <input
           value={newTitle}
           onChange={e => setNewTitle(e.target.value)}
           placeholder="Add an item…"
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
+          className="w-full px-3 py-2 bg-surface-2 border border-line-1 rounded"
         />
       </form>
 
       <ul className="flex-1 overflow-y-auto">
         {visible.length === 0 && (
-          <li className="p-4 text-sm text-gray-500">Nothing here yet.</li>
+          <li className="p-4 text-sm text-ink-4">Nothing here yet.</li>
         )}
         {visible.map(item => (
           <li
             key={item.id}
-            className={`flex items-center gap-3 px-4 py-2 border-b border-gray-800 cursor-pointer hover:bg-gray-800 ${
-              item.id === activeItemId ? 'bg-gray-800' : ''
+            className={`flex items-center gap-3 px-4 py-2 border-b border-gray-800 cursor-pointer hover:bg-surface-2 ${
+              item.id === activeItemId ? 'bg-surface-2' : ''
             }`}
             onClick={() => onSelectItem(item.id)}
           >
@@ -85,7 +85,7 @@ export default function ItemList({ list, items, activeItemId, onSelectItem, onRe
               className="w-4 h-4"
             />
             <span
-              className={`flex-1 truncate ${item.status === 'completed' ? 'line-through text-gray-500' : ''}`}
+              className={`flex-1 truncate ${item.status === 'completed' ? 'line-through text-ink-4' : ''}`}
             >
               {item.title}
             </span>
@@ -95,7 +95,7 @@ export default function ItemList({ list, items, activeItemId, onSelectItem, onRe
               </span>
             )}
             {item.tags?.length > 0 && (
-              <span className="text-xs text-gray-400">{item.tags.map(t => `#${t}`).join(' ')}</span>
+              <span className="text-xs text-ink-3">{item.tags.map(t => `#${t}`).join(' ')}</span>
             )}
           </li>
         ))}

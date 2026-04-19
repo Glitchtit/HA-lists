@@ -27,7 +27,7 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
 
   if (!itemId || !item) {
     return (
-      <aside className="hidden lg:flex w-96 border-l border-gray-700 items-center justify-center text-gray-500">
+      <aside className="hidden lg:flex w-96 border-l border-line-1 items-center justify-center text-ink-4">
         Select an item to see details.
       </aside>
     )
@@ -106,8 +106,8 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
   }
 
   return (
-    <aside className="w-full lg:w-96 bg-gray-900 border-l border-gray-700 overflow-y-auto">
-      <div className="p-4 border-b border-gray-700 flex items-start gap-2">
+    <aside className="w-full lg:w-96 bg-surface-1 border-l border-line-1 overflow-y-auto">
+      <div className="p-4 border-b border-line-1 flex items-start gap-2">
         <input
           value={item.title}
           onChange={e => setItem({ ...item, title: e.target.value })}
@@ -115,24 +115,24 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
           className="flex-1 bg-transparent text-lg font-semibold outline-none"
         />
         {onClose && (
-          <button onClick={onClose} className="text-gray-500 hover:text-white lg:hidden">✕</button>
+          <button onClick={onClose} className="text-ink-4 hover:text-white lg:hidden">✕</button>
         )}
       </div>
 
       <div className="p-4 space-y-4">
         <label className="block">
-          <span className="text-xs uppercase text-gray-400">Notes</span>
+          <span className="text-xs uppercase text-ink-3">Notes</span>
           <textarea
             value={item.notes || ''}
             onChange={e => setItem({ ...item, notes: e.target.value })}
             onBlur={() => patch({ notes: item.notes })}
             rows={4}
-            className="mt-1 w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-sm"
+            className="mt-1 w-full px-2 py-1 bg-surface-2 border border-line-1 rounded text-sm"
           />
         </label>
 
         <label className="block">
-          <span className="text-xs uppercase text-gray-400">
+          <span className="text-xs uppercase text-ink-3">
             Spiciness {'🌶️'.repeat(item.spiciness)}
           </span>
           <input
@@ -143,16 +143,16 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
             onChange={e => setItem({ ...item, spiciness: Number(e.target.value) })}
             onMouseUp={() => patch({ spiciness: item.spiciness })}
             onTouchEnd={() => patch({ spiciness: item.spiciness })}
-            className="w-full"
+            className="w-full spice"
           />
         </label>
 
         <label className="block">
-          <span className="text-xs uppercase text-gray-400">Assigned to</span>
+          <span className="text-xs uppercase text-ink-3">Assigned to</span>
           <select
             value={item.assigned_to || ''}
             onChange={e => patch({ assigned_to: e.target.value || null })}
-            className="mt-1 w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-sm"
+            className="mt-1 w-full px-2 py-1 bg-surface-2 border border-line-1 rounded text-sm"
           >
             <option value="">— Anyone —</option>
             {persons.map(p => (
@@ -162,25 +162,25 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
         </label>
 
         <label className="block">
-          <span className="text-xs uppercase text-gray-400">Due</span>
+          <span className="text-xs uppercase text-ink-3">Due</span>
           <input
             type="datetime-local"
             value={item.due_at ? item.due_at.slice(0, 16) : ''}
             onChange={e => patch({ due_at: e.target.value || null })}
-            className="mt-1 w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-sm"
+            className="mt-1 w-full px-2 py-1 bg-surface-2 border border-line-1 rounded text-sm"
           />
         </label>
 
         <div>
-          <span className="text-xs uppercase text-gray-400">Tags</span>
+          <span className="text-xs uppercase text-ink-3">Tags</span>
           <div className="flex flex-wrap gap-1 mt-1 mb-2">
             {(item.tags || []).map(t => (
               <span
                 key={t}
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-800 border border-gray-700 rounded text-xs"
+                className="inline-flex items-center gap-1 px-2 py-0.5 bg-surface-2 border border-line-1 rounded text-xs"
               >
                 #{t}
-                <button onClick={() => removeTag(t)} className="text-gray-500 hover:text-white">×</button>
+                <button onClick={() => removeTag(t)} className="text-ink-4 hover:text-white">×</button>
               </span>
             ))}
           </div>
@@ -189,19 +189,19 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
               value={newTag}
               onChange={e => setNewTag(e.target.value)}
               placeholder="new tag"
-              className="flex-1 px-2 py-1 text-sm bg-gray-800 border border-gray-700 rounded"
+              className="flex-1 px-2 py-1 text-sm bg-surface-2 border border-line-1 rounded"
             />
-            <button className="px-2 text-sm bg-gray-700 rounded hover:bg-gray-600">Add</button>
+            <button className="px-2 text-sm bg-surface-3 rounded hover:bg-surface-4">Add</button>
           </form>
         </div>
 
         <div>
-          <span className="text-xs uppercase text-gray-400">Subtasks</span>
+          <span className="text-xs uppercase text-ink-3">Subtasks</span>
           <div className="mt-1 mb-2 flex flex-wrap items-center gap-1 text-xs">
             <button
               onClick={runBreakdown}
               disabled={aiBusy === 'breakdown' || !!breakdownTaskId}
-              className="px-2 py-1 bg-purple-700 rounded hover:bg-purple-600 disabled:opacity-50"
+              className="px-2 py-1 bg-brand-orange rounded hover:bg-brand-orange-400 disabled:opacity-50"
               title="AI breakdown into subtasks at current spiciness"
             >
               🪄 Break down ({'🌶️'.repeat(item.spiciness)})
@@ -209,12 +209,12 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
             <button
               onClick={runEstimate}
               disabled={aiBusy === 'estimate'}
-              className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50"
+              className="px-2 py-1 bg-surface-3 rounded hover:bg-surface-4 disabled:opacity-50"
               title="AI time estimate"
             >
               ⏱️ Estimate
               {typeof item.estimate_min === 'number' && (
-                <span className="ml-1 text-gray-300">
+                <span className="ml-1 text-ink-2">
                   ({item.estimate_min}–{item.estimate_max}m)
                 </span>
               )}
@@ -222,7 +222,7 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
             <select
               value={tone}
               onChange={e => setTone(e.target.value)}
-              className="px-1 py-1 bg-gray-800 border border-gray-700 rounded"
+              className="px-1 py-1 bg-surface-2 border border-line-1 rounded"
               title="Tone for formalize"
             >
               {TONES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -230,13 +230,13 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
             <button
               onClick={runFormalize}
               disabled={aiBusy === 'formalize'}
-              className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50"
+              className="px-2 py-1 bg-surface-3 rounded hover:bg-surface-4 disabled:opacity-50"
               title="Rewrite notes in chosen tone"
             >
               ✏️ Formalize notes
             </button>
           </div>
-          {aiError && <div className="mb-2 text-xs text-red-400">{aiError}</div>}
+          {aiError && <div className="mb-2 text-xs text-semantic-danger">{aiError}</div>}
           <ul className="mt-1 space-y-1">
             {subtasks.map(st => (
               <li key={st.id} className="flex items-center gap-2 text-sm">
@@ -245,10 +245,10 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
                   checked={st.status === 'completed'}
                   onChange={() => toggleSub(st)}
                 />
-                <span className={st.status === 'completed' ? 'line-through text-gray-500' : ''}>
+                <span className={st.status === 'completed' ? 'line-through text-ink-4' : ''}>
                   {st.title}
                 </span>
-                {st.ai_generated && <span title="AI-generated" className="text-xs text-purple-400">✨</span>}
+                {st.ai_generated && <span title="AI-generated" className="text-xs text-brand-orange-300">✨</span>}
               </li>
             ))}
           </ul>
@@ -257,9 +257,9 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
               value={newSub}
               onChange={e => setNewSub(e.target.value)}
               placeholder="Add subtask…"
-              className="flex-1 px-2 py-1 text-sm bg-gray-800 border border-gray-700 rounded"
+              className="flex-1 px-2 py-1 text-sm bg-surface-2 border border-line-1 rounded"
             />
-            <button className="px-2 text-sm bg-gray-700 rounded hover:bg-gray-600">Add</button>
+            <button className="px-2 text-sm bg-surface-3 rounded hover:bg-surface-4">Add</button>
           </form>
         </div>
       </div>

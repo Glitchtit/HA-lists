@@ -33,12 +33,12 @@ export default function AiJobToast({ taskId, label, onDone, onDismiss }) {
   }, [taskId])
 
   const bg =
-    job.status === 'error' ? 'bg-red-900 border-red-700'
-    : job.status === 'done' ? 'bg-emerald-900 border-emerald-700'
-    : 'bg-purple-900 border-purple-700'
+    job.status === 'error' ? 'bg-[rgba(239,68,68,0.18)] border-red-700'
+    : job.status === 'done' ? 'bg-[rgba(16,185,129,0.18)] border-semantic-success'
+    : 'bg-brand-cobalt-600 border-brand-orange'
 
   return (
-    <div className={`fixed bottom-4 right-4 w-80 max-w-[90vw] rounded-lg border ${bg} text-white shadow-xl overflow-hidden`}>
+    <div className={`fixed bottom-4 right-4 w-80 max-w-[90vw] rounded-2xl border ${bg} text-white shadow-xl overflow-hidden animate-slide-up`}>
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
         <span className="text-sm font-medium flex items-center gap-2">
           {job.status === 'running' && <span className="animate-spin">✨</span>}
@@ -54,7 +54,7 @@ export default function AiJobToast({ taskId, label, onDone, onDismiss }) {
         </div>
       )}
       {job.status === 'error' && job.error && (
-        <div className="px-3 py-2 text-xs text-red-200">{job.error}</div>
+        <div className="px-3 py-2 text-xs text-semantic-danger">{job.error}</div>
       )}
     </div>
   )
