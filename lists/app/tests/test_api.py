@@ -1340,3 +1340,76 @@ class TestBoardPortals:
         detail = client.get(f"/api/boards/{src}").json()
         portal = next(n for n in detail["nodes"] if n["kind"] == "board")
         assert portal["ref_summary"] is None
+
+
+class TestSearchAndBacklinks:
+    def _board(self, client, name):
+        return client.post("/api/boards/", json={"name": name}).json()["id"]
+
+    def _note(self, client, title, body=""):
+        return client.post("/api/notes/", json={"title": title, "body": body}).json()["id"]
+
+    def test_search_empty_query_returns_empty(self, client):
+        r = client.get("/api/search", params={"q": ""})
+        assert r.status_code == 200
+        assert r.json() == {"results": []}
+
+    def test_search_finds_board_by_name(self, client):
+        self._board(client, "Project Nebula")
+        self._board(client, "Zebra Plans")
+        res = client.get("/api/search", params={"q": "nebula"}).json()["results"]
+        assert any(r["type"] == "board" and r["title"] == "Project Nebula" for r in res)
+
+    def test_search_finds_note_by_body(self, client):
+        self._note(client, "Meeting", "Discussed the quarterly roadmap today")
+        res = client.get("/api/search", params={"q": "quarterly"}).json()["results"]
+        assert any(r["type"] == "note" and "quarterly" in r["snippet"].lower() for r in res)
+
+    def test_search_finds_card_body(self, client):
+        bid = self._board(client, "Canvas")
+        client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "card", "title": "Idea", "body": "nebulous thoughts about pricing"},
+        )
+        res = client.get("/api/search", params={"q": "pricing"}).json()["results"]
+        assert any(r["type"] == "card" and r["board_id"] == bid for r in res)
+
+    def test_search_ignores_deleted_note(self, client):
+        nid = self._note(client, "EphemeralTopic", "about clouds")
+        client.delete(f"/api/notes/{nid}")
+        res = client.get("/api/search", params={"q": "EphemeralTopic"}).json()["results"]
+        assert not any(r["type"] == "note" and r["id"] == nid for r in res)
+
+    def test_board_backlinks_portals(self, client):
+        src = self._board(client, "Src")
+        dst = self._board(client, "Dst")
+        client.post(f"/api/boards/{src}/nodes", json={"kind": "board", "ref_id": dst})
+        bl = client.get(f"/api/boards/{dst}/backlinks").json()
+        assert len(bl["portals"]) == 1
+        assert bl["portals"][0]["board_id"] == src
+
+    def test_board_backlinks_wikilinks_in_cards(self, client):
+        target = self._board(client, "Docs")
+        other = self._board(client, "Scratch")
+        client.post(
+            f"/api/boards/{other}/nodes",
+            json={"kind": "card", "title": "ref", "body": "see [[Docs]] for details"},
+        )
+        bl = client.get(f"/api/boards/{target}/backlinks").json()
+        assert len(bl["cards"]) == 1
+        assert bl["cards"][0]["board_id"] == other
+
+    def test_board_backlinks_missing(self, client):
+        assert client.get("/api/boards/9999/backlinks").status_code == 404
+
+    def test_note_board_backlinks_via_ref_and_wikilink(self, client):
+        nid = self._note(client, "ProjectNote")
+        bid = self._board(client, "Canvas")
+        client.post(f"/api/boards/{bid}/nodes", json={"kind": "note", "ref_id": nid})
+        client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "card", "body": "see [[ProjectNote]] please"},
+        )
+        bl = client.get(f"/api/notes/{nid}/board_backlinks").json()
+        assert len(bl["refs"]) == 1
+        assert len(bl["cards"]) == 1

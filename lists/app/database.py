@@ -44,6 +44,11 @@ def initialize() -> int:
 
 def _migrate(conn: sqlite3.Connection) -> None:
     """Idempotent migrations for existing databases that predate newer features."""
+    _migrate_board_nodes(conn)
+    _migrate_search_index(conn)
+
+
+def _migrate_board_nodes(conn: sqlite3.Connection) -> None:
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(board_nodes)").fetchall()}
     # The base SCHEMA already emits the latest definition, so cols is the
     # target state on fresh installs. On upgrades, we rebuild if a newer
@@ -114,6 +119,98 @@ def _migrate(conn: sqlite3.Connection) -> None:
             """
         )
         conn.execute("PRAGMA foreign_keys = ON")
+
+
+def _migrate_search_index(conn: sqlite3.Connection) -> None:
+    """Create the FTS5 search_index table + triggers if they don't exist.
+
+    Populates from existing data on first build. Skips silently if FTS5 is
+    not available in this SQLite build (we fall back to LIKE scans at
+    query time).
+    """
+    existing = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='search_index'"
+    ).fetchone()
+    if existing:
+        return
+    try:
+        conn.executescript(
+            """
+            CREATE VIRTUAL TABLE search_index USING fts5(
+                entity_type UNINDEXED,
+                entity_id   UNINDEXED,
+                board_id    UNINDEXED,
+                title,
+                body,
+                tokenize = 'unicode61 remove_diacritics 2'
+            );
+            """
+        )
+    except sqlite3.OperationalError as e:  # pragma: no cover - FTS5 missing
+        logger.warning("FTS5 unavailable, search will use LIKE scans: %s", e)
+        return
+
+    # Backfill from existing boards, notes, and card-kind board_nodes.
+    conn.executescript(
+        """
+        INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+            SELECT 'board', id, id, name, '' FROM boards WHERE COALESCE(archived, 0) = 0;
+        INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+            SELECT 'note', id, NULL, title, COALESCE(body, '') FROM notes WHERE COALESCE(archived, 0) = 0;
+        INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+            SELECT 'card', id, board_id, COALESCE(title,''), COALESCE(body,'')
+              FROM board_nodes
+             WHERE kind = 'card';
+        """
+    )
+
+    # Triggers to keep the index in sync. We use AFTER triggers that DELETE+INSERT
+    # so UPDATE handling stays simple and doesn't require rowid tracking.
+    conn.executescript(
+        """
+        CREATE TRIGGER IF NOT EXISTS trg_search_boards_ai AFTER INSERT ON boards BEGIN
+            INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+                VALUES ('board', NEW.id, NEW.id, NEW.name, '');
+        END;
+        CREATE TRIGGER IF NOT EXISTS trg_search_boards_au AFTER UPDATE ON boards BEGIN
+            DELETE FROM search_index WHERE entity_type='board' AND entity_id=OLD.id;
+            INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+                VALUES ('board', NEW.id, NEW.id, NEW.name, '');
+        END;
+        CREATE TRIGGER IF NOT EXISTS trg_search_boards_ad AFTER DELETE ON boards BEGIN
+            DELETE FROM search_index WHERE entity_type='board' AND entity_id=OLD.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_search_notes_ai AFTER INSERT ON notes BEGIN
+            INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+                VALUES ('note', NEW.id, NULL, NEW.title, COALESCE(NEW.body,''));
+        END;
+        CREATE TRIGGER IF NOT EXISTS trg_search_notes_au AFTER UPDATE ON notes BEGIN
+            DELETE FROM search_index WHERE entity_type='note' AND entity_id=OLD.id;
+            INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+                VALUES ('note', NEW.id, NULL, NEW.title, COALESCE(NEW.body,''));
+        END;
+        CREATE TRIGGER IF NOT EXISTS trg_search_notes_ad AFTER DELETE ON notes BEGIN
+            DELETE FROM search_index WHERE entity_type='note' AND entity_id=OLD.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_search_nodes_ai AFTER INSERT ON board_nodes BEGIN
+            INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+                SELECT 'card', NEW.id, NEW.board_id, COALESCE(NEW.title,''), COALESCE(NEW.body,'')
+                 WHERE NEW.kind='card';
+        END;
+        CREATE TRIGGER IF NOT EXISTS trg_search_nodes_au AFTER UPDATE ON board_nodes BEGIN
+            DELETE FROM search_index WHERE entity_type='card' AND entity_id=OLD.id;
+            INSERT INTO search_index (entity_type, entity_id, board_id, title, body)
+                SELECT 'card', NEW.id, NEW.board_id, COALESCE(NEW.title,''), COALESCE(NEW.body,'')
+                 WHERE NEW.kind='card';
+        END;
+        CREATE TRIGGER IF NOT EXISTS trg_search_nodes_ad AFTER DELETE ON board_nodes BEGIN
+            DELETE FROM search_index WHERE entity_type='card' AND entity_id=OLD.id;
+        END;
+        """
+    )
+    conn.commit()
 
 
 SCHEMA = """
