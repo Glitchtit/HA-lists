@@ -280,7 +280,7 @@ class ViewportUpdate(BaseModel):
     zoom: float = 1
 
 
-NodeKind = Literal["list", "note", "card"]
+NodeKind = Literal["list", "note", "card", "image", "file", "group", "board"]
 
 
 class BoardNodeCreate(BaseModel):
@@ -294,6 +294,11 @@ class BoardNodeCreate(BaseModel):
     width: float = 240
     height: float = 160
     z: int = 0
+    media_filename: str | None = None
+    media_mime: str | None = None
+    media_size: int | None = None
+    media_alt: str | None = None
+    parent_group_id: int | None = None
 
 
 class BoardNodeUpdate(BaseModel):
@@ -305,6 +310,13 @@ class BoardNodeUpdate(BaseModel):
     width: float | None = None
     height: float | None = None
     z: int | None = None
+    media_alt: str | None = None
+    parent_group_id: int | None = None
+
+
+class BoardNodeTranslate(BaseModel):
+    dx: float = 0
+    dy: float = 0
 
 
 class BoardNode(BaseModel):
@@ -320,6 +332,11 @@ class BoardNode(BaseModel):
     width: float
     height: float
     z: int
+    media_filename: str | None = None
+    media_mime: str | None = None
+    media_size: int | None = None
+    media_alt: str | None = None
+    parent_group_id: int | None = None
     ref_summary: dict | None = None
     created_at: str
     updated_at: str

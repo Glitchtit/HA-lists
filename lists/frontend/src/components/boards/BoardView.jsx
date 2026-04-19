@@ -10,6 +10,7 @@ import ReactFlow, {
   useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import '@reactflow/node-resizer/dist/style.css';
 
 import {
   getBoard,
@@ -20,23 +21,56 @@ import {
   createBoardEdge,
   deleteBoardEdge,
   updateBoardViewport,
+  uploadBoardAttachment,
 } from '../../api';
 
 import ListNode from './nodes/ListNode';
 import NoteNode from './nodes/NoteNode';
 import CardNode from './nodes/CardNode';
+import ImageNode from './nodes/ImageNode';
+import FileNode from './nodes/FileNode';
+import GroupNode from './nodes/GroupNode';
+import BoardPortalNode from './nodes/BoardPortalNode';
 import NodeToolbar from './NodeToolbar';
 import './boards.css';
 
-const NODE_TYPES = { list: ListNode, note: NoteNode, card: CardNode };
+const NODE_TYPES = {
+  list: ListNode,
+  note: NoteNode,
+  card: CardNode,
+  image: ImageNode,
+  file: FileNode,
+  group: GroupNode,
+  board: BoardPortalNode,
+};
+
+const IMAGE_DEFAULT_SIZE = { width: 260, height: 220 };
+const FILE_DEFAULT_SIZE = { width: 240, height: 120 };
+const GROUP_DEFAULT_SIZE = { width: 420, height: 280 };
+const PORTAL_DEFAULT_SIZE = { width: 260, height: 150 };
+
+function isEditableFocused() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (el.isContentEditable) return true;
+  return false;
+}
 
 function toFlowNode(bn, handlers) {
+  const isGroup = bn.kind === 'group';
   return {
     id: String(bn.id),
     type: bn.kind,
     position: { x: Number(bn.x ?? 0), y: Number(bn.y ?? 0) },
     width: bn.width || undefined,
     height: bn.height || undefined,
+    // Groups paint behind everything so children remain clickable.
+    zIndex: isGroup ? -10 : 0,
+    style: isGroup && bn.width && bn.height
+      ? { width: bn.width, height: bn.height }
+      : undefined,
     data: { ...bn, ...handlers },
   };
 }
@@ -65,6 +99,11 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   // Position autosave
   const pendingPositionsRef = useRef(new Map());
   const positionTimerRef = useRef(null);
+
+  // Group drag tracking — when a group node is being dragged, capture the
+  // start position + child snapshot so we can cascade the delta to children
+  // and call /translate once on drag stop.
+  const groupDragRef = useRef(null);
 
   // Viewport autosave
   const viewportTimerRef = useRef(null);
@@ -195,10 +234,81 @@ function BoardCanvas({ boardId, onOpenEntity }) {
     setEdges((es) => applyEdgeChanges(changes, es));
   }, []);
 
+  const onNodeDragStart = useCallback((_e, node) => {
+    if (node.data?.kind !== 'group') {
+      groupDragRef.current = null;
+      return;
+    }
+    const childSnapshot = nodes
+      .filter((n) => n.data?.parent_group_id === Number(node.id))
+      .map((n) => ({ id: n.id, startPos: { ...n.position } }));
+    groupDragRef.current = {
+      id: node.id,
+      startPos: { ...node.position },
+      children: childSnapshot,
+    };
+  }, [nodes]);
+
+  const onNodeDrag = useCallback((_e, node) => {
+    const ref = groupDragRef.current;
+    if (!ref || ref.id !== node.id) return;
+    const dx = node.position.x - ref.startPos.x;
+    const dy = node.position.y - ref.startPos.y;
+    if (!ref.children.length) return;
+    setNodes((ns) => ns.map((n) => {
+      const snap = ref.children.find((c) => c.id === n.id);
+      if (!snap) return n;
+      return { ...n, position: { x: snap.startPos.x + dx, y: snap.startPos.y + dy } };
+    }));
+  }, []);
+
+  const _findContainingGroup = useCallback((node) => {
+    // Returns the smallest group whose bbox contains node's center, or null.
+    if (!node || node.data?.kind === 'group') return null;
+    const cx = node.position.x + (node.width || 240) / 2;
+    const cy = node.position.y + (node.height || 160) / 2;
+    let hit = null;
+    let hitArea = Infinity;
+    for (const n of nodes) {
+      if (n.data?.kind !== 'group') continue;
+      if (n.id === node.id) continue;
+      const w = n.width || n.data?.width || 0;
+      const h = n.height || n.data?.height || 0;
+      const x0 = n.position.x;
+      const y0 = n.position.y;
+      if (cx >= x0 && cx <= x0 + w && cy >= y0 && cy <= y0 + h) {
+        const area = w * h;
+        if (area < hitArea) { hit = n; hitArea = area; }
+      }
+    }
+    return hit;
+  }, [nodes]);
+
   const onNodeDragStop = useCallback((_e, node) => {
     pendingPositionsRef.current.set(node.id, node.position);
+    const ref = groupDragRef.current;
+    if (ref && ref.id === node.id) {
+      const dx = node.position.x - ref.startPos.x;
+      const dy = node.position.y - ref.startPos.y;
+      // Persist children's new positions so a refresh sees them.
+      for (const snap of ref.children) {
+        pendingPositionsRef.current.set(snap.id, {
+          x: snap.startPos.x + dx,
+          y: snap.startPos.y + dy,
+        });
+      }
+      groupDragRef.current = null;
+    } else {
+      // Drop-to-group: a non-group node may have landed inside a group.
+      const target = _findContainingGroup(node);
+      const currentParent = node.data?.parent_group_id ?? null;
+      const targetId = target ? Number(target.id) : null;
+      if (target && targetId !== currentParent) {
+        handleNodeUpdate(node.id, { parent_group_id: targetId });
+      }
+    }
     flushPositions();
-  }, [flushPositions]);
+  }, [flushPositions, _findContainingGroup, handleNodeUpdate, boardId]);
 
   const onConnect = useCallback(async (params) => {
     const tempId = `tmp-${Date.now()}`;
@@ -311,6 +421,98 @@ function BoardCanvas({ boardId, onOpenEntity }) {
     insertNode({ kind: 'note', ref_id: item.id, x, y }, refSummary);
   }, [insertNode, viewportCenter]);
 
+  const onAddBoard = useCallback((item) => {
+    if (!item?.id || item.id === boardId) return;
+    const { x, y } = viewportCenter();
+    const refSummary = {
+      id: item.id,
+      name: item.name || 'Untitled board',
+      icon: item.icon || '🗂️',
+      color: item.color || '',
+      node_count: item.node_count ?? 0,
+      edge_count: item.edge_count ?? 0,
+      last_modified: item.updated_at || null,
+    };
+    insertNode({
+      kind: 'board',
+      ref_id: item.id,
+      x: x - PORTAL_DEFAULT_SIZE.width / 2,
+      y: y - PORTAL_DEFAULT_SIZE.height / 2,
+      width: PORTAL_DEFAULT_SIZE.width,
+      height: PORTAL_DEFAULT_SIZE.height,
+    }, refSummary);
+  }, [insertNode, viewportCenter, boardId]);
+
+  const onAddGroup = useCallback(() => {
+    const { x, y } = viewportCenter();
+    insertNode({
+      kind: 'group',
+      title: 'Group',
+      x: x - GROUP_DEFAULT_SIZE.width / 2,
+      y: y - GROUP_DEFAULT_SIZE.height / 2,
+      width: GROUP_DEFAULT_SIZE.width,
+      height: GROUP_DEFAULT_SIZE.height,
+      color: 'var(--brand-cobalt)',
+    });
+  }, [insertNode, viewportCenter]);
+
+  // ─ Uploads: file → image/file node ───────────────────────
+  const uploadAndInsert = useCallback(async (files, originX, originY) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    let offset = 0;
+    for (const file of list) {
+      try {
+        const meta = await uploadBoardAttachment(boardId, file);
+        const isImage = (meta.mime || '').startsWith('image/');
+        const size = isImage ? IMAGE_DEFAULT_SIZE : FILE_DEFAULT_SIZE;
+        await insertNode({
+          kind: isImage ? 'image' : 'file',
+          x: originX + offset,
+          y: originY + offset,
+          width: size.width,
+          height: size.height,
+          title: meta.original_name || '',
+          media_filename: meta.filename,
+          media_mime: meta.mime,
+          media_size: meta.size,
+          media_alt: isImage ? (meta.original_name || '') : '',
+        });
+        offset += 24;
+      } catch (err) {
+        // best-effort; skip failed files
+      }
+    }
+  }, [boardId, insertNode]);
+
+  const onToolbarUpload = useCallback((files) => {
+    const { x, y } = viewportCenter();
+    uploadAndInsert(files, x, y);
+  }, [uploadAndInsert, viewportCenter]);
+
+  const onCanvasPaste = useCallback((e) => {
+    if (isEditableFocused()) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files = [];
+    for (const it of items) {
+      if (it.kind === 'file') {
+        const f = it.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (!files.length) return;
+    e.preventDefault();
+    const { x, y } = viewportCenter();
+    uploadAndInsert(files, x, y);
+  }, [uploadAndInsert, viewportCenter]);
+
+  useEffect(() => {
+    const handler = (e) => onCanvasPaste(e);
+    window.addEventListener('paste', handler);
+    return () => window.removeEventListener('paste', handler);
+  }, [onCanvasPaste]);
+
   // ─ Drag & drop: toolbar / sidebar → canvas ───────────────
   const DND_TYPE = 'application/x-ha-lists-board-node';
 
@@ -325,13 +527,21 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   const onCanvasDragOver = useCallback((e) => {
     const types = e.dataTransfer?.types;
     if (!types) return;
-    const has = Array.from(types).some((t) => t === DND_TYPE || t === 'text/plain');
+    const has = Array.from(types).some((t) => t === DND_TYPE || t === 'text/plain' || t === 'Files');
     if (!has) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   }, []);
 
   const onCanvasDrop = useCallback((e) => {
+    // OS file drop: upload each file.
+    const files = e.dataTransfer?.files;
+    if (files && files.length) {
+      e.preventDefault();
+      const pos = projectClient(e.clientX, e.clientY);
+      uploadAndInsert(files, pos.x, pos.y);
+      return;
+    }
     let raw = '';
     try { raw = e.dataTransfer.getData(DND_TYPE) || ''; } catch (err) { /* ignore */ }
     if (!raw) {
@@ -349,6 +559,16 @@ function BoardCanvas({ boardId, onOpenEntity }) {
     const pos = projectClient(e.clientX, e.clientY);
     if (payload.kind === 'card') {
       insertNode({ kind: 'card', x: pos.x, y: pos.y, title: payload.item?.title || 'New card', body: payload.item?.body || '' });
+    } else if (payload.kind === 'group') {
+      insertNode({
+        kind: 'group',
+        title: payload.item?.title || 'Group',
+        x: pos.x - GROUP_DEFAULT_SIZE.width / 2,
+        y: pos.y - GROUP_DEFAULT_SIZE.height / 2,
+        width: GROUP_DEFAULT_SIZE.width,
+        height: GROUP_DEFAULT_SIZE.height,
+        color: 'var(--brand-cobalt)',
+      });
     } else if (payload.kind === 'list' && payload.item?.id) {
       const refSummary = {
         id: payload.item.id,
@@ -367,18 +587,32 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         body_preview: (payload.item.body || '').slice(0, 400),
       };
       insertNode({ kind: 'note', ref_id: payload.item.id, x: pos.x, y: pos.y }, refSummary);
+    } else if (payload.kind === 'board' && payload.item?.id) {
+      if (payload.item.id === boardId) {
+        // Client-side cycle protection: a board cannot portal to itself.
+        return;
+      }
+      const refSummary = {
+        id: payload.item.id,
+        name: payload.item.name || 'Untitled board',
+        icon: payload.item.icon || '🗂️',
+        color: payload.item.color || '',
+        node_count: payload.item.node_count ?? 0,
+        edge_count: payload.item.edge_count ?? 0,
+        last_modified: payload.item.updated_at || null,
+      };
+      insertNode({
+        kind: 'board',
+        ref_id: payload.item.id,
+        x: pos.x - PORTAL_DEFAULT_SIZE.width / 2,
+        y: pos.y - PORTAL_DEFAULT_SIZE.height / 2,
+        width: PORTAL_DEFAULT_SIZE.width,
+        height: PORTAL_DEFAULT_SIZE.height,
+      }, refSummary);
     }
-  }, [insertNode, projectClient]);
+  }, [insertNode, projectClient, uploadAndInsert, boardId]);
 
   // ─ Keyboard: guard Delete/Backspace when focused in input ─
-  const isEditableFocused = () => {
-    const el = document.activeElement;
-    if (!el) return false;
-    const tag = el.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-    if (el.isContentEditable) return true;
-    return false;
-  };
   const [deleteKeys, setDeleteKeys] = useState(['Backspace', 'Delete']);
   useEffect(() => {
     const onKey = (e) => {
@@ -461,6 +695,50 @@ function BoardCanvas({ boardId, onOpenEntity }) {
     try { await deleteBoardEdge(boardId, edge.id); } catch (err) { /* ignore */ }
   }, [boardId]);
 
+  // ─ Group / Ungroup actions ───────────────────────────────
+  const groupSelection = useCallback(async () => {
+    const selected = nodes.filter((n) => n.selected && n.data?.kind !== 'group');
+    if (selected.length < 1) return;
+    const PADDING = 32;
+    const HEADER = 36;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of selected) {
+      const w = n.width || n.data?.width || 240;
+      const h = n.height || n.data?.height || 160;
+      minX = Math.min(minX, n.position.x);
+      minY = Math.min(minY, n.position.y);
+      maxX = Math.max(maxX, n.position.x + w);
+      maxY = Math.max(maxY, n.position.y + h);
+    }
+    const x = minX - PADDING;
+    const y = minY - PADDING - HEADER;
+    const width = (maxX - minX) + PADDING * 2;
+    const height = (maxY - minY) + PADDING * 2 + HEADER;
+    const created = await insertNode({
+      kind: 'group',
+      title: 'Group',
+      x, y, width, height,
+      color: 'var(--brand-cobalt)',
+    });
+    if (!created) return;
+    for (const n of selected) {
+      handleNodeUpdate(n.id, { parent_group_id: Number(created.id) });
+    }
+  }, [nodes, insertNode, handleNodeUpdate]);
+
+  const ungroup = useCallback(async (groupNode) => {
+    const gid = Number(groupNode.id);
+    const children = nodes.filter((n) => n.data?.parent_group_id === gid);
+    for (const c of children) {
+      handleNodeUpdate(c.id, { parent_group_id: null });
+    }
+    await handleNodeDelete(groupNode.id);
+  }, [nodes, handleNodeUpdate, handleNodeDelete]);
+
+  const removeFromGroup = useCallback(async (node) => {
+    handleNodeUpdate(node.id, { parent_group_id: null });
+  }, [handleNodeUpdate]);
+
   if (loading) return <div className="board-loading">Loading board…</div>;
   if (error) return <div className="board-error">Error: {error}</div>;
 
@@ -476,6 +754,10 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         onAddCard={onAddCard}
         onAddList={onAddList}
         onAddNote={onAddNote}
+        onAddBoard={onAddBoard}
+        onAddGroup={onAddGroup}
+        currentBoardId={boardId}
+        onUploadFiles={onToolbarUpload}
         onDragStartNew={handleToolbarDragStart}
       />
       <ReactFlow
@@ -484,6 +766,8 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         nodeTypes={NODE_TYPES}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onConnect={onConnect}
         onEdgesDelete={onEdgesDelete}
@@ -518,6 +802,22 @@ function BoardCanvas({ boardId, onOpenEntity }) {
               )}
               <button onClick={() => { duplicateNode(ctxMenu.target); closeCtx(); }}>Duplicate</button>
               <button onClick={() => { changeColor(ctxMenu.target); closeCtx(); }}>Change colour…</button>
+              {ctxMenu.target.data?.kind === 'group' && (
+                <button onClick={() => { ungroup(ctxMenu.target); closeCtx(); }}>
+                  Ungroup
+                </button>
+              )}
+              {ctxMenu.target.data?.kind !== 'group'
+                && nodes.filter((n) => n.selected && n.data?.kind !== 'group').length >= 1 && (
+                <button onClick={() => { groupSelection(); closeCtx(); }}>
+                  Group selection
+                </button>
+              )}
+              {ctxMenu.target.data?.kind !== 'group' && ctxMenu.target.data?.parent_group_id != null && (
+                <button onClick={() => { removeFromGroup(ctxMenu.target); closeCtx(); }}>
+                  Remove from group
+                </button>
+              )}
               <hr />
               <button className="danger" onClick={() => { handleNodeDelete(ctxMenu.target.id); closeCtx(); }}>
                 Delete
