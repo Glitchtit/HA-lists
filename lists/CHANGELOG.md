@@ -1,3 +1,26 @@
+## 0.9.2
+
+- Boards: new `board` portal node — embed any board on the canvas and double-click to navigate into it
+- Boards: portals show live node/edge counts and a last-modified timestamp; stale portals become tombstones if the target board is deleted
+- Boards: drag a board from the sidebar onto the canvas, or use the 🗂️ Add board toolbar picker
+- Boards: backend rejects self-referential portals and keeps `ref_summary` in sync with the target board
+
+## 0.9.1
+
+- Boards: new `group` node — a dashed coloured frame with a title bar that corrals related cards
+- Boards: drag a node onto a group to attach it; dragging the group moves all members together
+- Boards: right-click any node with neighbours selected to **Group selection**; right-click a group to **Ungroup**; right-click a member to **Remove from group**
+- Boards: 📦 New group toolbar button — click to drop at viewport center, or drag to place
+- Boards: groups are resizable; child positions persist atomically when the parent moves
+
+## 0.9.0
+
+- Boards: drop, paste, or upload images and files directly onto the canvas
+- Boards: new `image` node renders a thumbnail with click-to-zoom lightbox and editable alt text
+- Boards: new `file` node shows MIME, size, and a download link for attachments like PDFs, zips, audio, or video
+- Boards: 📎 Upload toolbar button; `Ctrl/Cmd+V` paste on the canvas creates image cards; OS file drag-drop also supported
+- Boards: duplicating a board now copies its attachment files too; deleting the last node that references an attachment purges the file from disk
+
 ## 0.8.7
 
 - Boards: removed confusing Strict/Loose connect toggle; strict mode is now always on (hover a node to see handle dots, drag from them to connect)

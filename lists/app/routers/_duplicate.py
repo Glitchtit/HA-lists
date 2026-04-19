@@ -11,6 +11,8 @@ They return the ID of the newly created row so the router can re-serialize it.
 
 from __future__ import annotations
 
+import os
+import shutil
 import sqlite3
 
 
@@ -209,11 +211,13 @@ def duplicate_board(
         "SELECT * FROM board_nodes WHERE board_id = ? ORDER BY id", (board_id,)
     ).fetchall()
     id_map: dict[int, int] = {}
+    # Pass 1: insert all nodes with parent_group_id left NULL (resolve in pass 2).
     for n in nodes:
         cur = conn.execute(
             """INSERT INTO board_nodes
-               (board_id, kind, ref_id, title, body, color, x, y, width, height, z)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               (board_id, kind, ref_id, title, body, color, x, y, width, height, z,
+                media_filename, media_mime, media_size, media_alt, parent_group_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)""",
             (
                 new_board_id,
                 n["kind"],
@@ -226,9 +230,25 @@ def duplicate_board(
                 n["width"],
                 n["height"],
                 n["z"],
+                n["media_filename"],
+                n["media_mime"],
+                n["media_size"],
+                n["media_alt"],
             ),
         )
         id_map[n["id"]] = cur.lastrowid
+    # Pass 2: wire child → group using the remapped ids.
+    for n in nodes:
+        pgid = n["parent_group_id"] if "parent_group_id" in n.keys() else None
+        if pgid is None:
+            continue
+        new_parent = id_map.get(pgid)
+        if new_parent is None:
+            continue
+        conn.execute(
+            "UPDATE board_nodes SET parent_group_id = ? WHERE id = ?",
+            (new_parent, id_map[n["id"]]),
+        )
 
     edges = conn.execute(
         "SELECT * FROM board_edges WHERE board_id = ? ORDER BY id", (board_id,)
@@ -244,6 +264,27 @@ def duplicate_board(
                VALUES (?, ?, ?, ?, ?)""",
             (new_board_id, src_new, tgt_new, e["label"], e["style"]),
         )
+
+    # Copy media files associated with any image/file nodes so the duplicate
+    # is self-contained. Failures here are best-effort — the row will just
+    # render as a broken image in the UI if the file is unreadable.
+    data_dir = os.environ.get("DATA_DIR", "/data")
+    media_root = os.path.join(data_dir, "board_media")
+    copied: set[str] = set()
+    for n in nodes:
+        fn = n["media_filename"]
+        if not fn or fn in copied:
+            continue
+        copied.add(fn)
+        src_path = os.path.join(media_root, str(board_id), fn)
+        dst_dir = os.path.join(media_root, str(new_board_id))
+        dst_path = os.path.join(dst_dir, fn)
+        try:
+            if os.path.exists(src_path):
+                os.makedirs(dst_dir, exist_ok=True)
+                shutil.copy2(src_path, dst_path)
+        except OSError:
+            pass
 
     conn.commit()
     return new_board_id

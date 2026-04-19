@@ -34,11 +34,86 @@ def initialize() -> int:
     conn = get_connection()
     conn.executescript(SCHEMA)
     conn.commit()
+    _migrate(conn)
     tables = conn.execute(
         "SELECT count(*) FROM sqlite_master WHERE type='table'"
     ).fetchone()[0]
     logger.info("Database initialized with %d tables", tables)
     return tables
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Idempotent migrations for existing databases that predate newer features."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(board_nodes)").fetchall()}
+    # The base SCHEMA already emits the latest definition, so cols is the
+    # target state on fresh installs. On upgrades, we rebuild if a newer
+    # column is missing, or if the kind CHECK constraint lacks a new literal.
+    table_sql_row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='board_nodes'"
+    ).fetchone()
+    table_sql = (table_sql_row["sql"] if table_sql_row else "") or ""
+    kind_literals_missing = "'board'" not in table_sql  # v0.9.2 added 'board' portal
+    if "parent_group_id" not in cols or kind_literals_missing:
+        # Rebuild board_nodes to extend the kind CHECK constraint
+        # (SQLite can't ALTER an existing CHECK) and add the new columns.
+        # FK references from board_edges.source_node_id / target_node_id are
+        # preserved because we re-use ids via INSERT SELECT and keep the
+        # renamed table under the original name. We toggle foreign_keys OFF
+        # during the swap per SQLite's recommended table-redefinition recipe.
+        logger.info("Migrating board_nodes: extend kind literals + columns")
+        has_media = "media_filename" in cols
+        has_parent = "parent_group_id" in cols
+        media_sel = (
+            "media_filename, media_mime, media_size, media_alt"
+            if has_media
+            else "NULL, NULL, NULL, NULL"
+        )
+        parent_sel = "parent_group_id" if has_parent else "NULL"
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.executescript(
+            f"""
+            BEGIN;
+            CREATE TABLE board_nodes_new (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                board_id        INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+                kind            TEXT NOT NULL
+                                CHECK (kind IN ('list','note','card','image','file','group','board')),
+                ref_id          INTEGER,
+                title           TEXT    DEFAULT '',
+                body            TEXT    DEFAULT '',
+                color           TEXT    DEFAULT '',
+                x               REAL    NOT NULL DEFAULT 0,
+                y               REAL    NOT NULL DEFAULT 0,
+                width           REAL    NOT NULL DEFAULT 240,
+                height          REAL    NOT NULL DEFAULT 160,
+                z               INTEGER DEFAULT 0,
+                media_filename  TEXT,
+                media_mime      TEXT,
+                media_size      INTEGER,
+                media_alt       TEXT,
+                parent_group_id INTEGER REFERENCES board_nodes(id) ON DELETE SET NULL,
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO board_nodes_new
+                (id, board_id, kind, ref_id, title, body, color,
+                 x, y, width, height, z,
+                 media_filename, media_mime, media_size, media_alt,
+                 parent_group_id,
+                 created_at, updated_at)
+                SELECT id, board_id, kind, ref_id, title, body, color,
+                       x, y, width, height, z, {media_sel},
+                       {parent_sel},
+                       created_at, updated_at
+                FROM board_nodes;
+            DROP TABLE board_nodes;
+            ALTER TABLE board_nodes_new RENAME TO board_nodes;
+            CREATE INDEX IF NOT EXISTS idx_board_nodes_board ON board_nodes(board_id);
+            CREATE INDEX IF NOT EXISTS idx_board_nodes_parent ON board_nodes(parent_group_id);
+            COMMIT;
+            """
+        )
+        conn.execute("PRAGMA foreign_keys = ON")
 
 
 SCHEMA = """
@@ -167,22 +242,29 @@ CREATE TABLE IF NOT EXISTS boards (
 CREATE INDEX IF NOT EXISTS idx_boards_folder ON boards(folder_id);
 
 CREATE TABLE IF NOT EXISTS board_nodes (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    board_id   INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
-    kind       TEXT NOT NULL CHECK (kind IN ('list','note','card')),
-    ref_id     INTEGER,
-    title      TEXT    DEFAULT '',
-    body       TEXT    DEFAULT '',
-    color      TEXT    DEFAULT '',
-    x          REAL    NOT NULL DEFAULT 0,
-    y          REAL    NOT NULL DEFAULT 0,
-    width      REAL    NOT NULL DEFAULT 240,
-    height     REAL    NOT NULL DEFAULT 160,
-    z          INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id        INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    kind            TEXT NOT NULL
+                    CHECK (kind IN ('list','note','card','image','file','group','board')),
+    ref_id          INTEGER,
+    title           TEXT    DEFAULT '',
+    body            TEXT    DEFAULT '',
+    color           TEXT    DEFAULT '',
+    x               REAL    NOT NULL DEFAULT 0,
+    y               REAL    NOT NULL DEFAULT 0,
+    width           REAL    NOT NULL DEFAULT 240,
+    height          REAL    NOT NULL DEFAULT 160,
+    z               INTEGER DEFAULT 0,
+    media_filename  TEXT,
+    media_mime      TEXT,
+    media_size      INTEGER,
+    media_alt       TEXT,
+    parent_group_id INTEGER REFERENCES board_nodes(id) ON DELETE SET NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_board_nodes_board ON board_nodes(board_id);
+CREATE INDEX IF NOT EXISTS idx_board_nodes_parent ON board_nodes(parent_group_id);
 
 CREATE TABLE IF NOT EXISTS board_edges (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
