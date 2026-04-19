@@ -1,3 +1,8 @@
+## 0.8.4
+
+- Notes: default mode is now Preview (was Split) — click Source or Split in the toolbar to edit
+- Notes: Outline/Backlinks sidebar is hidden by default; shows a slim ☰ Outline toggle button; ✕ to hide
+
 ## 0.8.3
 
 - Boards: fix newly-added list/note nodes showing "deleted" immediately — POST response has no ref_summary so the optimistic node now carries the known item data as ref_summary
