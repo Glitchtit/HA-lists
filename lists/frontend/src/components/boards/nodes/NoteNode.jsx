@@ -2,6 +2,13 @@ import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import NotePreview from '../../notes/NotePreview';
 
+// Close any unclosed fenced code block (e.g. from body_preview truncation)
+function safePreview(text) {
+  if (!text) return '';
+  const fenceCount = (text.match(/^```/gm) || []).length;
+  return fenceCount % 2 !== 0 ? text + '\n```' : text;
+}
+
 function NoteNode({ data, selected }) {
   const summary = data?.ref_summary;
   // Only tombstone if we have a ref_id but no summary — not when summary is simply absent
@@ -31,7 +38,7 @@ function NoteNode({ data, selected }) {
       {!tombstone && (
         <div className="bn-body">
           <div className="bn-note-body nowheel">
-            <NotePreview body={summary?.body_preview || ''} />
+            <NotePreview body={safePreview(summary?.body_preview)} simplified />
           </div>
         </div>
       )}

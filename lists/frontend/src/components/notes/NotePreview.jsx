@@ -96,6 +96,7 @@ export default function NotePreview({
   onToggleChecklist,
   visitedEmbeds,
   isEmbed = false,
+  simplified = false,
 }) {
   const remarkPlugins = useMemo(
     () => [remarkGfm, remarkBreaks, remarkMath, remarkEmbed, remarkWikilink, remarkCallout],
@@ -138,6 +139,9 @@ export default function NotePreview({
       const lang = /language-(\w+)/.exec(className || '');
       const text = String(children).replace(/\n$/, '');
       if (!inline && lang && lang[1] === 'mermaid') {
+        if (simplified) {
+          return <span className="text-xs text-ink-3 italic">📊 Diagram</span>;
+        }
         return <MermaidBlock code={text} />;
       }
       if (inline) {
