@@ -78,8 +78,6 @@ export default function NodeToolbar({
   onAddCard,
   onAddList,
   onAddNote,
-  connectLoose,
-  onToggleConnect,
   onDragStartNew,
 }) {
   const [open, setOpen] = useState(null); // 'list' | 'note' | null
@@ -142,14 +140,6 @@ export default function NodeToolbar({
           />
         )}
       </div>
-      <button
-        className={`board-toolbar-btn ${connectLoose ? 'active' : ''}`}
-        onClick={onToggleConnect}
-        title="Toggle loose connection mode (drag between any handles)"
-      >
-        <span className="board-toolbar-icon">⇄</span>
-        <span>{connectLoose ? 'Loose connect' : 'Strict connect'}</span>
-      </button>
     </div>
   );
 }

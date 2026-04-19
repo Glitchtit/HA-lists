@@ -7,7 +7,6 @@ import ReactFlow, {
   addEdge,
   applyNodeChanges,
   applyEdgeChanges,
-  ConnectionMode,
   useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -58,7 +57,6 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [viewport, setViewport] = useState(null);
-  const [connectLoose, setConnectLoose] = useState(false);
   const [ctxMenu, setCtxMenu] = useState(null); // {type:'node'|'edge', x, y, target}
 
   const rf = useReactFlow();
@@ -478,8 +476,6 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         onAddCard={onAddCard}
         onAddList={onAddList}
         onAddNote={onAddNote}
-        connectLoose={connectLoose}
-        onToggleConnect={() => setConnectLoose((v) => !v)}
         onDragStartNew={handleToolbarDragStart}
       />
       <ReactFlow
@@ -495,7 +491,7 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         onMove={onMove}
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
-        connectionMode={connectLoose ? ConnectionMode.Loose : ConnectionMode.Strict}
+        connectionMode="strict"
         deleteKeyCode={deleteKeys}
         fitView={!viewport}
         defaultViewport={viewport || undefined}

@@ -1,3 +1,7 @@
+## 0.8.7
+
+- Boards: removed confusing Strict/Loose connect toggle; strict mode is now always on (hover a node to see handle dots, drag from them to connect)
+
 ## 0.8.6
 
 - Fix: board note cards no longer crash with "Syntax error" from mermaid — mermaid blocks render as a `📊 Diagram` placeholder in card previews; truncated code fences are auto-closed
