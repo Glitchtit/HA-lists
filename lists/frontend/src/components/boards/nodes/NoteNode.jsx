@@ -4,7 +4,8 @@ import NotePreview from '../../notes/NotePreview';
 
 function NoteNode({ data, selected }) {
   const summary = data?.ref_summary;
-  const tombstone = !summary && (data?.kind === 'note');
+  // Only tombstone if we have a ref_id but no summary — not when summary is simply absent
+  const tombstone = data?.ref_id != null && !summary;
   const color = data?.color || 'var(--brand-cobalt)';
 
   const handleClick = (e) => {
