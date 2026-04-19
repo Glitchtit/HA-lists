@@ -57,9 +57,11 @@ export default function App() {
       <ItemList
         list={activeList}
         items={items}
+        lists={lists}
+        persons={persons}
         activeItemId={activeItemId}
         onSelectItem={setActiveItemId}
-        onRefresh={() => loadItems(activeListId)}
+        onRefresh={() => { loadItems(activeListId); loadTopLevel() }}
         onCompile={activeList ? () => setCompileOpen(true) : null}
       />
       <ItemDetail

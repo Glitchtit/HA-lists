@@ -1,3 +1,13 @@
+## 0.6.0
+
+- PC-style right-click context menus on folders, lists, items, subtasks and tag chips
+- Deep-copy duplicate for folders, lists and items via new `/duplicate` endpoints
+- Move lists across folders (or to Unfiled) and items between lists straight from the menu
+- Inline rename (F2) for folders, lists, items and subtasks; confirm dialog on delete
+- Assign / Spiciness / Priority / Change-icon submenus; tag rename, recolor, detach, delete-globally
+- Keyboard shortcuts: F2 rename, Delete (with confirm), Ctrl+D duplicate item
+- Tag rename now returns 409 instead of 500 on unique-name collision
+
 ## 0.5.0
 
 - AI provider is now configured directly in the add-on options (no Storage dependency)
