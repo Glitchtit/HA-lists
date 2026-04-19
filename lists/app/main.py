@@ -127,6 +127,7 @@ from routers import folders, health, items, lists as lists_router, notes, notes_
 from routers import ai as ai_router
 from routers import boards
 from routers import search as search_router
+from routers import board_templates
 
 app.include_router(health.router)
 app.include_router(folders.router)
@@ -140,6 +141,7 @@ app.include_router(notes.router)
 app.include_router(notes_ai.router)
 app.include_router(boards.router)
 app.include_router(search_router.router)
+app.include_router(board_templates.router)
 
 
 if __name__ == "__main__":

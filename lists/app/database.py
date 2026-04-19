@@ -46,6 +46,7 @@ def _migrate(conn: sqlite3.Connection) -> None:
     """Idempotent migrations for existing databases that predate newer features."""
     _migrate_board_nodes(conn)
     _migrate_search_index(conn)
+    _seed_board_templates(conn)
 
 
 def _migrate_board_nodes(conn: sqlite3.Connection) -> None:
@@ -373,4 +374,116 @@ CREATE TABLE IF NOT EXISTS board_edges (
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_board_edges_board ON board_edges(board_id);
+
+CREATE TABLE IF NOT EXISTS board_templates (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT    NOT NULL,
+    icon        TEXT    DEFAULT '🗒️',
+    color       TEXT    DEFAULT '',
+    body_md     TEXT    NOT NULL DEFAULT '',
+    title       TEXT    DEFAULT '',
+    width       REAL    DEFAULT 240,
+    height      REAL    DEFAULT 160,
+    category    TEXT    DEFAULT 'general',
+    is_system   INTEGER DEFAULT 0,
+    sort_order  INTEGER DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_board_templates_category ON board_templates(category);
 """
+
+
+SYSTEM_TEMPLATES = [
+    {
+        "name": "Sticky",
+        "icon": "🟨",
+        "color": "#fbbf24",
+        "title": "",
+        "body_md": "Write it down before you forget.",
+        "width": 200,
+        "height": 160,
+        "category": "basic",
+    },
+    {
+        "name": "Checklist",
+        "icon": "✅",
+        "color": "",
+        "title": "Checklist",
+        "body_md": "- [ ] First task\n- [ ] Second task\n- [ ] Third task",
+        "width": 260,
+        "height": 200,
+        "category": "basic",
+    },
+    {
+        "name": "Meeting note",
+        "icon": "🗓️",
+        "color": "",
+        "title": "Meeting — ",
+        "body_md": (
+            "**Attendees:**\n\n"
+            "**Agenda:**\n- \n- \n\n"
+            "**Decisions:**\n- \n\n"
+            "**Action items:**\n- [ ] "
+        ),
+        "width": 320,
+        "height": 280,
+        "category": "work",
+    },
+    {
+        "name": "Link bookmark",
+        "icon": "🔖",
+        "color": "",
+        "title": "",
+        "body_md": "[Title](https://)\n\n> Why it matters:",
+        "width": 260,
+        "height": 140,
+        "category": "basic",
+    },
+    {
+        "name": "Code snippet",
+        "icon": "💻",
+        "color": "",
+        "title": "Snippet",
+        "body_md": "```\n// paste code here\n```",
+        "width": 320,
+        "height": 220,
+        "category": "basic",
+    },
+    {
+        "name": "Quote",
+        "icon": "❝",
+        "color": "",
+        "title": "",
+        "body_md": "> Your quote here\n\n— Source",
+        "width": 280,
+        "height": 160,
+        "category": "basic",
+    },
+]
+
+
+def _seed_board_templates(conn: sqlite3.Connection) -> None:
+    """Insert system templates once. Users can add their own afterwards."""
+    existing = conn.execute("SELECT COUNT(*) FROM board_templates WHERE is_system = 1").fetchone()
+    if existing and existing[0] >= len(SYSTEM_TEMPLATES):
+        return
+    # Insert any missing system templates (matched by name).
+    have_names = {
+        r["name"] for r in conn.execute(
+            "SELECT name FROM board_templates WHERE is_system = 1"
+        ).fetchall()
+    }
+    for i, t in enumerate(SYSTEM_TEMPLATES):
+        if t["name"] in have_names:
+            continue
+        conn.execute(
+            """INSERT INTO board_templates
+                 (name, icon, color, body_md, title, width, height, category, is_system, sort_order)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)""",
+            (
+                t["name"], t["icon"], t["color"], t["body_md"], t["title"],
+                t["width"], t["height"], t["category"], i,
+            ),
+        )
+    conn.commit()

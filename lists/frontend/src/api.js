@@ -144,3 +144,13 @@ export const getBoardBacklinks = (boardId) =>
   api.get(`/boards/${boardId}/backlinks`).then(r => r.data);
 export const getNoteBoardBacklinks = (noteId) =>
   api.get(`/notes/${noteId}/board_backlinks`).then(r => r.data);
+
+// ── Board templates ────────────────────────────────────────────────────────
+export const getBoardTemplates = (params = {}) =>
+  api.get('/board-templates/', { params }).then(r => r.data);
+export const createBoardTemplate = (payload) =>
+  api.post('/board-templates/', payload).then(r => r.data);
+export const updateBoardTemplate = (id, patch) =>
+  api.patch(`/board-templates/${id}`, patch).then(r => r.data);
+export const deleteBoardTemplate = (id) =>
+  api.delete(`/board-templates/${id}`);
