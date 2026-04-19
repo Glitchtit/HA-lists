@@ -1,3 +1,7 @@
+## 0.9.8
+
+- Fix: dragging a card out of a group frame now clears its group membership (parent_group_id was never set to null when dropped outside all groups)
+
 ## 0.9.7
 
 - Fix board image attachments returning 404 when the URL ends in a file extension (nginx `^~` prefix match for `/api/` prevents static-asset regex from intercepting API routes)

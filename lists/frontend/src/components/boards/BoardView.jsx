@@ -308,7 +308,7 @@ function BoardCanvas({ boardId, onOpenEntity }) {
       const target = _findContainingGroup(node);
       const currentParent = node.data?.parent_group_id ?? null;
       const targetId = target ? Number(target.id) : null;
-      if (target && targetId !== currentParent) {
+      if (targetId !== currentParent) {
         handleNodeUpdate(node.id, { parent_group_id: targetId });
       }
     }
