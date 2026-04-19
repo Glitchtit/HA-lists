@@ -136,3 +136,11 @@ export const uploadBoardAttachment = (boardId, file) => {
 };
 export const attachmentUrl = (boardId, filename) =>
   `${INGRESS_PATH}/api/boards/${boardId}/attachments/${encodeURIComponent(filename)}`;
+
+// ── Search + backlinks ─────────────────────────────────────────────────────
+export const searchAll = (q, limit = 20) =>
+  api.get('/search', { params: { q, limit } }).then(r => r.data);
+export const getBoardBacklinks = (boardId) =>
+  api.get(`/boards/${boardId}/backlinks`).then(r => r.data);
+export const getNoteBoardBacklinks = (noteId) =>
+  api.get(`/notes/${noteId}/board_backlinks`).then(r => r.data);

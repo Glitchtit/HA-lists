@@ -9,6 +9,7 @@ import NoteEditor from './components/notes/NoteEditor'
 import NoteToolbar from './components/notes/NoteToolbar'
 import NotesRightPane from './components/notes/NotesRightPane'
 import BoardView from './components/boards/BoardView.jsx'
+import CommandPalette from './components/search/CommandPalette.jsx'
 
 export default function App() {
   const [folders, setFolders] = useState([])
@@ -26,6 +27,25 @@ export default function App() {
   const [rewriteConfirm, setRewriteConfirm] = useState(null)
   const [editorMode, setEditorMode] = useState('preview') // 'split'|'source'|'preview'
   const [noteBodyVersion, setNoteBodyVersion] = useState(0)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e) => {
+      const key = (e.key || '').toLowerCase()
+      if ((e.metaKey || e.ctrlKey) && key === 'k') {
+        const tag = (e.target?.tagName || '').toLowerCase()
+        if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) {
+          if (!paletteOpen) return
+        }
+        e.preventDefault()
+        setPaletteOpen((v) => !v)
+      } else if (e.key === 'Escape' && paletteOpen) {
+        setPaletteOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [paletteOpen])
 
   async function loadTopLevel() {
     try {
@@ -287,6 +307,11 @@ export default function App() {
           {toast}
         </div>
       )}
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onJump={(e) => setActiveEntity(e)}
+      />
       {compileOpen && activeList && (
         <CompileDialog
           listId={activeList.id}
