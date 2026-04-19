@@ -62,13 +62,14 @@ function isEditableFocused() {
 
 function toFlowNode(bn, handlers) {
   const isGroup = bn.kind === 'group';
+  const isCard  = bn.kind === 'card';
   return {
     id: String(bn.id),
     type: bn.kind,
     position: { x: Number(bn.x ?? 0), y: Number(bn.y ?? 0) },
     width: bn.width || undefined,
-    height: bn.height || undefined,
-    // Groups paint behind everything so children remain clickable.
+    // Cards auto-size to content; don't lock in a stored height.
+    height: isCard ? undefined : (bn.height || undefined),
     zIndex: isGroup ? -10 : 0,
     style: isGroup && bn.width && bn.height
       ? { width: bn.width, height: bn.height }
