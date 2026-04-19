@@ -50,3 +50,14 @@ export const getPersons = (includeInactive = false) =>
   api.get('/persons/', { params: { include_inactive: includeInactive } }).then(r => r.data);
 export const getMe = () => api.get('/persons/me').then(r => r.data);
 export const syncPersons = () => api.post('/persons/sync').then(r => r.data);
+
+// ── AI (Goblin Tools) ───────────────────────────────────────────────────────
+export const aiBreakdown = (itemId, spiciness) =>
+  api.post('/ai/breakdown', { item_id: itemId, spiciness }).then(r => r.data);
+export const aiEstimate = (itemId) =>
+  api.post('/ai/estimate', { item_id: itemId }).then(r => r.data);
+export const aiCompile = (listId, brainDump) =>
+  api.post('/ai/compile', { list_id: listId, brain_dump: brainDump }).then(r => r.data);
+export const aiFormalize = (text, tone) =>
+  api.post('/ai/formalize', { text, tone }).then(r => r.data);
+export const getAiJob = (taskId) => api.get(`/ai/jobs/${taskId}`).then(r => r.data);

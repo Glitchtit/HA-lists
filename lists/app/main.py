@@ -124,6 +124,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 from routers import folders, health, items, lists as lists_router, persons, subtasks, tags
+from routers import ai as ai_router
 
 app.include_router(health.router)
 app.include_router(folders.router)
@@ -132,6 +133,7 @@ app.include_router(items.router)
 app.include_router(subtasks.router)
 app.include_router(tags.router)
 app.include_router(persons.router)
+app.include_router(ai_router.router)
 
 
 if __name__ == "__main__":

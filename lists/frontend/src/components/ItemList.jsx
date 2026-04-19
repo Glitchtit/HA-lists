@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import * as api from '../api'
 
-export default function ItemList({ list, items, activeItemId, onSelectItem, onRefresh }) {
+export default function ItemList({ list, items, activeItemId, onSelectItem, onRefresh, onCompile }) {
   const [newTitle, setNewTitle] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
 
@@ -31,18 +31,29 @@ export default function ItemList({ list, items, activeItemId, onSelectItem, onRe
 
   return (
     <section className="flex-1 flex flex-col border-r border-gray-700 min-w-0">
-      <header className="p-4 border-b border-gray-700 flex items-center justify-between">
+      <header className="p-4 border-b border-gray-700 flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold truncate">
           {list.icon || '📝'} {list.name}
         </h2>
-        <label className="text-xs text-gray-400 flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={showCompleted}
-            onChange={e => setShowCompleted(e.target.checked)}
-          />
-          Show completed
-        </label>
+        <div className="flex items-center gap-2">
+          {onCompile && (
+            <button
+              onClick={onCompile}
+              className="px-2 py-1 text-xs bg-purple-700 rounded hover:bg-purple-600"
+              title="Brain-dump → items (AI compile)"
+            >
+              ✨ Compile
+            </button>
+          )}
+          <label className="text-xs text-gray-400 flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={showCompleted}
+              onChange={e => setShowCompleted(e.target.checked)}
+            />
+            Show completed
+          </label>
+        </div>
       </header>
 
       <form onSubmit={addItem} className="p-4 border-b border-gray-700">
