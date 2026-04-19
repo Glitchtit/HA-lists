@@ -69,7 +69,7 @@ export default function App() {
         onClose={() => setActiveItemId(null)}
       />
       {error && (
-        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-red-900 text-red-100 px-3 py-2 rounded text-sm">
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-[rgba(239,68,68,0.18)] text-semantic-danger px-3 py-2 rounded text-sm">
           {error}
         </div>
       )}

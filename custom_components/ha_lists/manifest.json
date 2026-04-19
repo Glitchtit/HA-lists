@@ -1,7 +1,7 @@
 {
   "domain": "ha_lists",
   "name": "Lists",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "documentation": "https://github.com/Glitchtit/HA-lists",
   "requirements": [
     "httpx>=0.28.0"

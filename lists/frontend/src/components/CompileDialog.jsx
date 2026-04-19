@@ -29,14 +29,14 @@ export default function CompileDialog({ listId, listName, onClose, onRefresh }) 
         onClick={onClose}
       >
         <div
-          className="w-full max-w-lg bg-gray-900 border border-gray-700 rounded-xl shadow-2xl"
+          className="w-full max-w-lg bg-surface-1 border border-line-1 rounded-xl shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-line-1">
             <h2 className="text-base font-semibold flex items-center gap-2">
               ✨ Compile brain-dump → {listName || 'list'}
             </h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-white">✕</button>
+            <button onClick={onClose} className="text-ink-4 hover:text-white">✕</button>
           </div>
 
           <form onSubmit={submit} className="p-4 space-y-3">
@@ -46,22 +46,22 @@ export default function CompileDialog({ listId, listName, onClose, onRefresh }) 
               onChange={e => setText(e.target.value)}
               placeholder="Dump everything on your mind — the AI will turn it into a clean list of items."
               rows={8}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm resize-y"
+              className="w-full px-3 py-2 bg-surface-2 border border-line-1 rounded text-sm resize-y"
               disabled={busy}
             />
-            {error && <div className="text-sm text-red-400">{error}</div>}
+            {error && <div className="text-sm text-semantic-danger">{error}</div>}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-1.5 text-sm bg-gray-700 rounded hover:bg-gray-600"
+                className="px-3 py-1.5 text-sm bg-surface-3 rounded hover:bg-surface-4"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!text.trim() || busy}
-                className="px-3 py-1.5 text-sm bg-purple-700 rounded hover:bg-purple-600 disabled:opacity-50"
+                className="px-3 py-1.5 text-sm bg-brand-orange rounded hover:bg-brand-orange-400 disabled:opacity-50"
               >
                 {busy ? 'Compiling…' : 'Compile'}
               </button>
