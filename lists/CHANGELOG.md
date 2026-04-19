@@ -1,3 +1,7 @@
+## 0.8.6
+
+- Fix: board note cards no longer crash with "Syntax error" from mermaid — mermaid blocks render as a `📊 Diagram` placeholder in card previews; truncated code fences are auto-closed
+
 ## 0.8.5
 
 - Fix: notes now correctly open in Preview mode (editorMode state was in App.jsx, not NoteEditor)
