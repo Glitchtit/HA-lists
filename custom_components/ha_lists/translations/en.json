@@ -1,0 +1,16 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Lists Add-on Connection",
+        "description": "Enter the URL of the Lists add-on (e.g. http://homeassistant.local:8099)",
+        "data": {
+          "addon_url": "Add-on URL"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the Lists add-on. Make sure it is installed and running."
+    }
+  }
+}
