@@ -8,14 +8,16 @@ import ConfirmDialog from './components/ConfirmDialog'
 import NoteEditor from './components/notes/NoteEditor'
 import NoteToolbar from './components/notes/NoteToolbar'
 import NotesRightPane from './components/notes/NotesRightPane'
+import BoardView from './components/boards/BoardView.jsx'
 
 export default function App() {
   const [folders, setFolders] = useState([])
   const [lists, setLists] = useState([])
   const [notes, setNotes] = useState([])
+  const [boards, setBoards] = useState([])
   const [items, setItems] = useState([])
   const [persons, setPersons] = useState([])
-  const [activeEntity, setActiveEntity] = useState(null) // {kind:'list'|'note', id}
+  const [activeEntity, setActiveEntity] = useState(null) // {kind:'list'|'note'|'board', id}
   const [activeItemId, setActiveItemId] = useState(null)
   const [activeNote, setActiveNote] = useState(null)
   const [error, setError] = useState(null)
@@ -27,15 +29,17 @@ export default function App() {
 
   async function loadTopLevel() {
     try {
-      const [f, l, n, p] = await Promise.all([
+      const [f, l, n, b, p] = await Promise.all([
         api.getFolders(false),
         api.getLists(),
         api.getNotes({ archived: false }),
+        api.listBoards({ archived: false }),
         api.getPersons(),
       ])
       setFolders(f)
       setLists(l)
       setNotes(n)
+      setBoards(b)
       setPersons(p)
       setError(null)
     } catch (e) {
@@ -221,12 +225,17 @@ export default function App() {
         folders={folders}
         lists={lists}
         notes={notes}
+        boards={boards}
         activeEntity={activeEntity}
         onSelect={onSelect}
         onRefresh={loadTopLevel}
       />
 
-      {activeEntity?.kind === 'note' ? (
+      {activeEntity?.kind === 'board' ? (
+        <div className="flex-1 min-w-0 flex flex-col">
+          <BoardView boardId={activeEntity.id} onOpenEntity={(e) => setActiveEntity(e)} />
+        </div>
+      ) : activeEntity?.kind === 'note' ? (
         <div className="flex-1 min-w-0 flex flex-col">
           <NoteToolbar note={activeNote} onAction={handleNoteAction} lists={lists} />
           <div className="flex-1 min-h-0">
@@ -254,7 +263,7 @@ export default function App() {
         />
       )}
 
-      {activeEntity?.kind === 'note' ? (
+      {activeEntity?.kind === 'board' ? null : activeEntity?.kind === 'note' ? (
         <NotesRightPane
           note={activeNote}
           onSelect={(id) => setActiveEntity({ kind: 'note', id })}

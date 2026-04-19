@@ -6,11 +6,13 @@ import InlineEditLabel from './InlineEditLabel'
 
 const ICON_CHOICES = ['📁', '📋', '📝', '🛒', '🏠', '💼', '🎯', '🔧', '🌱', '🍽️', '🎨', '🏃']
 const NOTE_ICON_CHOICES = ['📝', '📓', '📒', '📕', '📗', '📘', '📙', '🗒️', '📄', '🧠', '💡', '⭐']
+const BOARD_ICON_CHOICES = ['🧩', '🗺️', '🧠', '🪐', '🧭', '🎛️', '📐', '🗂️', '🔗', '✨', '🌌', '🧱']
 
-export default function Sidebar({ folders, lists, notes = [], activeEntity, onSelect, onRefresh }) {
+export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh }) {
   const [newListName, setNewListName] = useState('')
   const [newFolderName, setNewFolderName] = useState('')
   const [newNoteTitle, setNewNoteTitle] = useState('')
+  const [newBoardName, setNewBoardName] = useState('')
   const [adding, setAdding] = useState(null)
   const [menu, setMenu] = useState(null)           // { kind, id, x, y }
   const [confirm, setConfirm] = useState(null)
@@ -49,6 +51,18 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
     onSelect && onSelect({ kind: 'note', id: n.id })
   }
 
+  async function addBoard(folderId) {
+    if (!newBoardName.trim()) return
+    const b = await api.createBoard({
+      name: newBoardName.trim(),
+      folder_id: folderId,
+    })
+    setNewBoardName('')
+    setAdding(null)
+    await onRefresh()
+    onSelect && onSelect({ kind: 'board', id: b.id })
+  }
+
   const listsByFolder = {}
   const looseLists = []
   for (const l of lists) {
@@ -70,6 +84,14 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
   looseNotes.sort(sortNotes)
   for (const k of Object.keys(notesByFolder)) notesByFolder[k].sort(sortNotes)
 
+  const boardsByFolder = {}
+  const looseBoards = []
+  for (const b of boards) {
+    if (b.archived) continue
+    if (b.folder_id == null) looseBoards.push(b)
+    else (boardsByFolder[b.folder_id] ||= []).push(b)
+  }
+
   function openMenu(e, kind, id) {
     e.preventDefault(); e.stopPropagation()
     setMenu({ kind, id, x: e.clientX, y: e.clientY })
@@ -78,15 +100,18 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
 
   const activeListId = activeEntity?.kind === 'list' ? activeEntity.id : null
   const activeNoteId = activeEntity?.kind === 'note' ? activeEntity.id : null
+  const activeBoardId = activeEntity?.kind === 'board' ? activeEntity.id : null
 
   const menuFolder = menu?.kind === 'folder' ? folders.find(f => f.id === menu.id) : null
   const menuList = menu?.kind === 'list' ? lists.find(l => l.id === menu.id) : null
   const menuNote = menu?.kind === 'note' ? notes.find(n => n.id === menu.id) : null
+  const menuBoard = menu?.kind === 'board' ? boards.find(b => b.id === menu.id) : null
 
   const folderMenuItems = menuFolder ? [
     { label: 'Rename', icon: '✏️', hint: 'F2', onClick: () => setEditing({ kind: 'folder', id: menuFolder.id }) },
     { label: 'New list in folder', icon: '➕', onClick: () => setAdding(`folder-${menuFolder.id}`) },
     { label: 'New note in folder', icon: '📝', onClick: () => setAdding(`note-folder-${menuFolder.id}`) },
+    { label: 'New board in folder', icon: '🧩', onClick: () => setAdding(`board-folder-${menuFolder.id}`) },
     {
       label: 'Change icon', icon: '🎨',
       children: ICON_CHOICES.map(ic => ({
@@ -102,7 +127,7 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
     {
       label: 'Delete', icon: '🗑️', danger: true, hint: 'Del',
       onClick: () => {
-        const count = (listsByFolder[menuFolder.id] || []).length + (notesByFolder[menuFolder.id] || []).length
+        const count = (listsByFolder[menuFolder.id] || []).length + (notesByFolder[menuFolder.id] || []).length + (boardsByFolder[menuFolder.id] || []).length
         setConfirm({
           title: `Delete folder "${menuFolder.name}"?`,
           message: count > 0
@@ -203,9 +228,56 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
     },
   ] : []
 
+  const boardMenuItems = menuBoard ? [
+    { label: 'Rename', icon: '✏️', hint: 'F2', onClick: () => setEditing({ kind: 'board', id: menuBoard.id }) },
+    { label: 'Duplicate', icon: '📑', hint: 'Ctrl+D', onClick: async () => { await api.duplicateBoard(menuBoard.id); onRefresh() } },
+    {
+      label: 'Move to folder', icon: '📂',
+      children: [
+        {
+          label: '— Unfiled —',
+          onClick: async () => { await api.updateBoard(menuBoard.id, { folder_id: null }); onRefresh() },
+        },
+        { separator: true },
+        ...folders.map(f => ({
+          label: `${f.icon || '📁'} ${f.name}`,
+          disabled: f.id === menuBoard.folder_id,
+          onClick: async () => { await api.updateBoard(menuBoard.id, { folder_id: f.id }); onRefresh() },
+        })),
+      ],
+    },
+    {
+      label: 'Change icon', icon: '🎨',
+      children: BOARD_ICON_CHOICES.map(ic => ({
+        label: ic, onClick: async () => { await api.updateBoard(menuBoard.id, { icon: ic }); onRefresh() },
+      })),
+    },
+    {
+      label: menuBoard.pinned ? 'Unpin' : 'Pin', icon: '📌',
+      onClick: async () => { await api.updateBoard(menuBoard.id, { pinned: !menuBoard.pinned }); onRefresh() },
+    },
+    {
+      label: menuBoard.archived ? 'Unarchive' : 'Archive', icon: '🗄️',
+      onClick: async () => { await api.updateBoard(menuBoard.id, { archived: !menuBoard.archived }); onRefresh() },
+    },
+    { separator: true },
+    {
+      label: 'Delete', icon: '🗑️', danger: true, hint: 'Del',
+      onClick: () => {
+        setConfirm({
+          title: `Delete board "${menuBoard.name}"?`,
+          message: 'This board and all of its nodes and edges will be permanently deleted.',
+          danger: true,
+          onConfirm: async () => { await api.deleteBoard(menuBoard.id); setConfirm(null); onRefresh() },
+        })
+      },
+    },
+  ] : []
+
   const menuItems =
     menu?.kind === 'folder' ? folderMenuItems :
     menu?.kind === 'note' ? noteMenuItems :
+    menu?.kind === 'board' ? boardMenuItems :
     listMenuItems
 
   return (
@@ -240,8 +312,10 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
           folder={folder}
           lists={listsByFolder[folder.id] || []}
           notes={notesByFolder[folder.id] || []}
+          boards={boardsByFolder[folder.id] || []}
           activeListId={activeListId}
           activeNoteId={activeNoteId}
+          activeBoardId={activeBoardId}
           onSelect={onSelect}
           adding={adding}
           setAdding={setAdding}
@@ -249,11 +323,15 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
           setNewListName={setNewListName}
           newNoteTitle={newNoteTitle}
           setNewNoteTitle={setNewNoteTitle}
+          newBoardName={newBoardName}
+          setNewBoardName={setNewBoardName}
           addList={addList}
           addNote={addNote}
+          addBoard={addBoard}
           onFolderMenu={(e) => openMenu(e, 'folder', folder.id)}
           onListMenu={(e, id) => openMenu(e, 'list', id)}
           onNoteMenu={(e, id) => openMenu(e, 'note', id)}
+          onBoardMenu={(e, id) => openMenu(e, 'board', id)}
           editing={editing}
           setEditing={setEditing}
           onRefresh={onRefresh}
@@ -277,6 +355,13 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
               title="New note"
             >
               📝
+            </button>
+            <button
+              onClick={() => setAdding('board-loose')}
+              className="text-ink-3 hover:text-ink-1"
+              title="New board"
+            >
+              🧩
             </button>
           </div>
         </div>
@@ -331,6 +416,33 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
             onCancelRename={() => setEditing(null)}
           />
         ))}
+        {looseBoards.length > 0 && (looseLists.length > 0 || looseNotes.length > 0) && (
+          <div className="my-1 border-t border-line-1 opacity-60" />
+        )}
+        {adding === 'board-loose' && (
+          <form onSubmit={e => { e.preventDefault(); addBoard(null) }} className="mb-2 flex gap-1">
+            <input
+              autoFocus
+              value={newBoardName}
+              onChange={e => setNewBoardName(e.target.value)}
+              placeholder="Board name"
+              className="flex-1 px-2 py-1 text-sm bg-surface-3 text-ink-1 rounded"
+            />
+            <button className="px-2 text-sm bg-brand-cobalt text-white rounded hover:bg-brand-cobalt-400">Add</button>
+          </form>
+        )}
+        {looseBoards.map(board => (
+          <BoardRow
+            key={board.id}
+            board={board}
+            active={board.id === activeBoardId}
+            onClick={() => onSelect && onSelect({ kind: 'board', id: board.id })}
+            onContextMenu={(e) => openMenu(e, 'board', board.id)}
+            editing={editing?.kind === 'board' && editing.id === board.id}
+            onCommitRename={async (name) => { await api.updateBoard(board.id, { name }); setEditing(null); onRefresh() }}
+            onCancelRename={() => setEditing(null)}
+          />
+        ))}
       </div>
 
       <ContextMenu
@@ -355,12 +467,14 @@ export default function Sidebar({ folders, lists, notes = [], activeEntity, onSe
 }
 
 function FolderSection({
-  folder, lists, notes, activeListId, activeNoteId, onSelect, adding, setAdding,
-  newListName, setNewListName, newNoteTitle, setNewNoteTitle, addList, addNote,
-  onFolderMenu, onListMenu, onNoteMenu, editing, setEditing, onRefresh,
+  folder, lists, notes, boards, activeListId, activeNoteId, activeBoardId, onSelect, adding, setAdding,
+  newListName, setNewListName, newNoteTitle, setNewNoteTitle, newBoardName, setNewBoardName,
+  addList, addNote, addBoard,
+  onFolderMenu, onListMenu, onNoteMenu, onBoardMenu, editing, setEditing, onRefresh,
 }) {
   const listKey = `folder-${folder.id}`
   const noteKey = `note-folder-${folder.id}`
+  const boardKey = `board-folder-${folder.id}`
   const isEditing = editing?.kind === 'folder' && editing.id === folder.id
   return (
     <div className="mb-3">
@@ -393,6 +507,13 @@ function FolderSection({
             title="New note in folder"
           >
             📝
+          </button>
+          <button
+            onClick={() => setAdding(boardKey)}
+            className="text-ink-3 hover:text-ink-1 text-xs"
+            title="New board in folder"
+          >
+            🧩
           </button>
         </div>
       </div>
@@ -447,6 +568,33 @@ function FolderSection({
           onCancelRename={() => setEditing(null)}
         />
       ))}
+      {boards.length > 0 && (lists.length > 0 || notes.length > 0) && (
+        <div className="my-1 border-t border-line-1 opacity-60" />
+      )}
+      {adding === boardKey && (
+        <form onSubmit={e => { e.preventDefault(); addBoard(folder.id) }} className="mb-2 flex gap-1">
+          <input
+            autoFocus
+            value={newBoardName}
+            onChange={e => setNewBoardName(e.target.value)}
+            placeholder="Board name"
+            className="flex-1 px-2 py-1 text-sm bg-surface-3 text-ink-1 rounded"
+          />
+          <button className="px-2 text-sm bg-brand-cobalt text-white rounded hover:bg-brand-cobalt-400">Add</button>
+        </form>
+      )}
+      {boards.map(b => (
+        <BoardRow
+          key={b.id}
+          board={b}
+          active={b.id === activeBoardId}
+          onClick={() => onSelect && onSelect({ kind: 'board', id: b.id })}
+          onContextMenu={(e) => onBoardMenu(e, b.id)}
+          editing={editing?.kind === 'board' && editing.id === b.id}
+          onCommitRename={async (name) => { await api.updateBoard(b.id, { name }); setEditing(null); onRefresh() }}
+          onCancelRename={() => setEditing(null)}
+        />
+      ))}
     </div>
   )
 }
@@ -498,6 +646,34 @@ function NoteRow({ note, active, onClick, onContextMenu, editing, onCommitRename
         <span className="truncate flex-1">
           {note.pinned && <span className="mr-1 text-[10px]" title="Pinned">📌</span>}
           {note.title || 'Untitled'}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function BoardRow({ board, active, onClick, onContextMenu, editing, onCommitRename, onCancelRename }) {
+  return (
+    <div
+      onContextMenu={onContextMenu}
+      className={`w-full flex items-center gap-1 px-2 py-1.5 rounded text-sm ${
+        active ? 'bg-brand-cobalt text-white' : 'text-ink-2 hover:bg-surface-3'
+      } ${editing ? '' : 'cursor-pointer'}`}
+      onClick={editing ? undefined : onClick}
+    >
+      <span>{board.icon || '🧩'}</span>
+      {editing ? (
+        <InlineEditLabel
+          value={board.name}
+          editing
+          onCommit={onCommitRename}
+          onCancel={onCancelRename}
+          inputClassName="flex-1 min-w-0 px-1 py-0 bg-surface-3 text-ink-1 border border-brand-cobalt rounded outline-none text-sm"
+        />
+      ) : (
+        <span className="truncate flex-1">
+          {board.pinned && <span className="mr-1 text-[10px]" title="Pinned">📌</span>}
+          {board.name || 'Untitled'}
         </span>
       )}
     </div>

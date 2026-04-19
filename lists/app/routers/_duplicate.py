@@ -164,3 +164,86 @@ def duplicate_folder(
 
     conn.commit()
     return new_folder_id
+
+
+def duplicate_board(
+    conn: sqlite3.Connection,
+    board_id: int,
+    *,
+    target_folder_id: int | None = -1,  # sentinel: -1 means "same folder"
+    name_suffix: str = " (copy)",
+) -> int:
+    """Deep-copy a board (+ all nodes + all edges, with id remapping).
+
+    ``target_folder_id=None`` places the copy in "Unfiled"; leave as sentinel
+    to keep the source folder. Returns the new board's id.
+    """
+    src = conn.execute("SELECT * FROM boards WHERE id = ?", (board_id,)).fetchone()
+    if not src:
+        raise ValueError(f"board_id {board_id} not found")
+    folder_id = src["folder_id"] if target_folder_id == -1 else target_folder_id
+
+    if folder_id is None:
+        sort_order = _next_sort_order(conn, "boards", "folder_id IS NULL", ())
+    else:
+        sort_order = _next_sort_order(conn, "boards", "folder_id = ?", (folder_id,))
+
+    cursor = conn.execute(
+        """INSERT INTO boards
+           (folder_id, name, icon, color, pinned, archived, sort_order, viewport)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            folder_id,
+            (src["name"] or "") + name_suffix,
+            src["icon"],
+            src["color"],
+            src["pinned"],
+            src["archived"],
+            sort_order,
+            src["viewport"],
+        ),
+    )
+    new_board_id = cursor.lastrowid
+
+    nodes = conn.execute(
+        "SELECT * FROM board_nodes WHERE board_id = ? ORDER BY id", (board_id,)
+    ).fetchall()
+    id_map: dict[int, int] = {}
+    for n in nodes:
+        cur = conn.execute(
+            """INSERT INTO board_nodes
+               (board_id, kind, ref_id, title, body, color, x, y, width, height, z)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                new_board_id,
+                n["kind"],
+                n["ref_id"],
+                n["title"],
+                n["body"],
+                n["color"],
+                n["x"],
+                n["y"],
+                n["width"],
+                n["height"],
+                n["z"],
+            ),
+        )
+        id_map[n["id"]] = cur.lastrowid
+
+    edges = conn.execute(
+        "SELECT * FROM board_edges WHERE board_id = ? ORDER BY id", (board_id,)
+    ).fetchall()
+    for e in edges:
+        src_new = id_map.get(e["source_node_id"])
+        tgt_new = id_map.get(e["target_node_id"])
+        if src_new is None or tgt_new is None:
+            continue
+        conn.execute(
+            """INSERT INTO board_edges
+               (board_id, source_node_id, target_node_id, label, style)
+               VALUES (?, ?, ?, ?, ?)""",
+            (new_board_id, src_new, tgt_new, e["label"], e["style"]),
+        )
+
+    conn.commit()
+    return new_board_id

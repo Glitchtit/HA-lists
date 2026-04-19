@@ -570,3 +570,387 @@ class TestBacklinks:
         snip = bls[0]["snippet"]
         assert len(snip) <= 120
         assert "[[B]]" in snip or "B" in snip
+
+
+class TestBoards:
+    def test_create_with_defaults(self, client):
+        r = client.post("/api/boards/", json={"name": "Plan"})
+        assert r.status_code == 201
+        data = r.json()
+        assert data["name"] == "Plan"
+        assert data["icon"] == "🧩"
+        assert data["pinned"] is False
+        assert data["archived"] is False
+        assert data["viewport"] == {"x": 0, "y": 0, "zoom": 1}
+
+    def test_create_rejects_bad_folder(self, client):
+        r = client.post("/api/boards/", json={"name": "X", "folder_id": 9999})
+        assert r.status_code == 400
+
+    def test_filter_by_folder_and_search(self, client):
+        f1 = client.post("/api/folders/", json={"name": "F1"}).json()["id"]
+        f2 = client.post("/api/folders/", json={"name": "F2"}).json()["id"]
+        client.post("/api/boards/", json={"folder_id": f1, "name": "Alpha"})
+        client.post("/api/boards/", json={"folder_id": f1, "name": "Beta"})
+        client.post("/api/boards/", json={"folder_id": f2, "name": "Gamma"})
+        assert len(client.get(f"/api/boards/?folder_id={f1}").json()) == 2
+        assert len(client.get(f"/api/boards/?folder_id={f2}").json()) == 1
+        hits = client.get("/api/boards/?search=alp").json()
+        assert [b["name"] for b in hits] == ["Alpha"]
+
+    def test_patch_archive_pinned(self, client):
+        bid = client.post("/api/boards/", json={"name": "B"}).json()["id"]
+        r = client.patch(f"/api/boards/{bid}", json={"pinned": True, "archived": True})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["pinned"] is True
+        assert data["archived"] is True
+        # Archived hidden by default
+        assert len(client.get("/api/boards/").json()) == 0
+        assert len(client.get("/api/boards/?archived=true").json()) == 1
+
+    def test_patch_rejects_bad_folder(self, client):
+        bid = client.post("/api/boards/", json={"name": "B"}).json()["id"]
+        r = client.patch(f"/api/boards/{bid}", json={"folder_id": 9999})
+        assert r.status_code == 400
+
+    def test_list_order_pinned_first(self, client):
+        a = client.post("/api/boards/", json={"name": "A", "sort_order": 3}).json()["id"]
+        b = client.post("/api/boards/", json={"name": "B", "sort_order": 1}).json()["id"]
+        c = client.post(
+            "/api/boards/", json={"name": "C", "sort_order": 5, "pinned": True}
+        ).json()["id"]
+        ids = [x["id"] for x in client.get("/api/boards/").json()]
+        assert ids[0] == c
+        assert ids.index(b) < ids.index(a)
+
+    def test_delete_cascades_nodes_and_edges(self, client, tmp_db):
+        bid = client.post("/api/boards/", json={"name": "B"}).json()["id"]
+        n1 = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "card", "title": "A"}
+        ).json()["id"]
+        n2 = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "card", "title": "B"}
+        ).json()["id"]
+        client.post(
+            f"/api/boards/{bid}/edges",
+            json={"source_node_id": n1, "target_node_id": n2},
+        )
+        assert client.delete(f"/api/boards/{bid}").status_code == 204
+        nc = tmp_db.execute(
+            "SELECT COUNT(*) AS c FROM board_nodes WHERE board_id = ?", (bid,)
+        ).fetchone()["c"]
+        ec = tmp_db.execute(
+            "SELECT COUNT(*) AS c FROM board_edges WHERE board_id = ?", (bid,)
+        ).fetchone()["c"]
+        assert nc == 0 and ec == 0
+
+    def test_folder_delete_detaches_boards(self, client):
+        fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        bid = client.post(
+            "/api/boards/", json={"name": "B", "folder_id": fid}
+        ).json()["id"]
+        client.delete(f"/api/folders/{fid}")
+        r = client.get(f"/api/boards/{bid}")
+        assert r.status_code == 200
+        assert r.json()["board"]["folder_id"] is None
+
+    def test_duplicate_copies_nodes_and_edges(self, client):
+        bid = client.post("/api/boards/", json={"name": "Orig"}).json()["id"]
+        n_ids = [
+            client.post(
+                f"/api/boards/{bid}/nodes",
+                json={"kind": "card", "title": f"N{i}", "x": float(i), "y": 0.0},
+            ).json()["id"]
+            for i in range(3)
+        ]
+        client.post(
+            f"/api/boards/{bid}/edges",
+            json={"source_node_id": n_ids[0], "target_node_id": n_ids[1]},
+        )
+        client.post(
+            f"/api/boards/{bid}/edges",
+            json={"source_node_id": n_ids[1], "target_node_id": n_ids[2]},
+        )
+        r = client.post(f"/api/boards/{bid}/duplicate")
+        assert r.status_code == 201
+        new = r.json()
+        assert new["name"].endswith("(copy)")
+        new_id = new["id"]
+        detail = client.get(f"/api/boards/{new_id}").json()
+        assert len(detail["nodes"]) == 3
+        assert len(detail["edges"]) == 2
+        new_node_ids = {n["id"] for n in detail["nodes"]}
+        # Edges reference the NEW ids, not the old ones.
+        for e in detail["edges"]:
+            assert e["source_node_id"] in new_node_ids
+            assert e["target_node_id"] in new_node_ids
+            assert e["source_node_id"] not in n_ids
+            assert e["target_node_id"] not in n_ids
+
+    def test_viewport_roundtrip(self, client):
+        bid = client.post("/api/boards/", json={"name": "B"}).json()["id"]
+        r = client.patch(
+            f"/api/boards/{bid}/viewport", json={"x": 42.5, "y": -10.0, "zoom": 1.5}
+        )
+        assert r.status_code == 200
+        assert r.json()["viewport"] == {"x": 42.5, "y": -10.0, "zoom": 1.5}
+        detail = client.get(f"/api/boards/{bid}").json()
+        assert detail["board"]["viewport"] == {"x": 42.5, "y": -10.0, "zoom": 1.5}
+
+    def test_get_unknown_board_404(self, client):
+        assert client.get("/api/boards/9999").status_code == 404
+
+
+class TestBoardNodes:
+    def _board(self, client) -> int:
+        return client.post("/api/boards/", json={"name": "B"}).json()["id"]
+
+    def test_create_card(self, client):
+        bid = self._board(client)
+        r = client.post(
+            f"/api/boards/{bid}/nodes",
+            json={"kind": "card", "title": "hi", "body": "world"},
+        )
+        assert r.status_code == 201
+        data = r.json()
+        assert data["kind"] == "card"
+        assert data["ref_id"] is None
+        assert data["title"] == "hi"
+        assert data["width"] == 240
+        assert data["height"] == 160
+
+    def test_create_list_node(self, client):
+        bid = self._board(client)
+        lid = client.post("/api/lists/", json={"name": "My List"}).json()["id"]
+        r = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "list", "ref_id": lid}
+        )
+        assert r.status_code == 201
+        assert r.json()["ref_id"] == lid
+
+    def test_create_note_node(self, client):
+        bid = self._board(client)
+        nid = client.post("/api/notes/", json={"title": "N"}).json()["id"]
+        r = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "note", "ref_id": nid}
+        )
+        assert r.status_code == 201
+        assert r.json()["ref_id"] == nid
+
+    def test_reject_missing_ref_id_for_list(self, client):
+        bid = self._board(client)
+        r = client.post(f"/api/boards/{bid}/nodes", json={"kind": "list"})
+        assert r.status_code == 400
+
+    def test_reject_missing_ref_id_for_note(self, client):
+        bid = self._board(client)
+        r = client.post(f"/api/boards/{bid}/nodes", json={"kind": "note"})
+        assert r.status_code == 400
+
+    def test_reject_unknown_ref_id_for_list(self, client):
+        bid = self._board(client)
+        r = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "list", "ref_id": 9999}
+        )
+        assert r.status_code == 400
+
+    def test_reject_unknown_ref_id_for_note(self, client):
+        bid = self._board(client)
+        r = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "note", "ref_id": 9999}
+        )
+        assert r.status_code == 400
+
+    def test_patch_partial(self, client):
+        bid = self._board(client)
+        nid = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "card", "title": "t"}
+        ).json()["id"]
+        r = client.patch(
+            f"/api/boards/{bid}/nodes/{nid}", json={"title": "t2", "x": 99.0}
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["title"] == "t2"
+        assert data["x"] == 99.0
+
+    def test_bulk_positions(self, client):
+        bid = self._board(client)
+        ids = [
+            client.post(
+                f"/api/boards/{bid}/nodes", json={"kind": "card", "title": str(i)}
+            ).json()["id"]
+            for i in range(3)
+        ]
+        payload = {
+            "positions": [
+                {"id": ids[0], "x": 10.0, "y": 20.0},
+                {"id": ids[1], "x": 30.0, "y": 40.0},
+                {"id": ids[2], "x": 50.0, "y": 60.0},
+            ]
+        }
+        r = client.post(f"/api/boards/{bid}/nodes/bulk-positions", json=payload)
+        assert r.status_code == 204
+        detail = client.get(f"/api/boards/{bid}").json()
+        coords = {n["id"]: (n["x"], n["y"]) for n in detail["nodes"]}
+        assert coords[ids[0]] == (10.0, 20.0)
+        assert coords[ids[1]] == (30.0, 40.0)
+        assert coords[ids[2]] == (50.0, 60.0)
+
+    def test_bulk_positions_skips_foreign_ids(self, client):
+        b1 = self._board(client)
+        b2 = self._board(client)
+        n1 = client.post(
+            f"/api/boards/{b1}/nodes", json={"kind": "card", "title": "a"}
+        ).json()["id"]
+        n2 = client.post(
+            f"/api/boards/{b2}/nodes", json={"kind": "card", "title": "b"}
+        ).json()["id"]
+        r = client.post(
+            f"/api/boards/{b1}/nodes/bulk-positions",
+            json={
+                "positions": [
+                    {"id": n1, "x": 5.0, "y": 5.0},
+                    {"id": n2, "x": 999.0, "y": 999.0},  # belongs to b2, skipped
+                ]
+            },
+        )
+        assert r.status_code == 204
+        d2 = client.get(f"/api/boards/{b2}").json()
+        assert d2["nodes"][0]["x"] != 999.0
+
+    def test_delete_single_node(self, client):
+        bid = self._board(client)
+        nid = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "card", "title": "x"}
+        ).json()["id"]
+        assert client.delete(f"/api/boards/{bid}/nodes/{nid}").status_code == 204
+        assert len(client.get(f"/api/boards/{bid}").json()["nodes"]) == 0
+
+    def test_tombstone_when_ref_deleted(self, client):
+        bid = self._board(client)
+        lid = client.post("/api/lists/", json={"name": "Doomed"}).json()["id"]
+        nid = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "list", "ref_id": lid}
+        ).json()["id"]
+        client.delete(f"/api/lists/{lid}")
+        detail = client.get(f"/api/boards/{bid}").json()
+        node = next(n for n in detail["nodes"] if n["id"] == nid)
+        assert node["ref_summary"] is None
+        assert node["ref_id"] == lid  # tombstoned ref kept
+
+    def test_ref_summary_for_list(self, client):
+        bid = self._board(client)
+        lid = client.post("/api/lists/", json={"name": "Groceries"}).json()["id"]
+        client.post("/api/items/", json={"list_id": lid, "title": "a"})
+        iid = client.post(
+            "/api/items/", json={"list_id": lid, "title": "b"}
+        ).json()["id"]
+        client.patch(f"/api/items/{iid}", json={"status": "completed"})
+        client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "list", "ref_id": lid}
+        )
+        detail = client.get(f"/api/boards/{bid}").json()
+        s = detail["nodes"][0]["ref_summary"]
+        assert s["id"] == lid
+        assert s["name"] == "Groceries"
+        assert s["item_count"] == 2
+        assert s["completed_count"] == 1
+
+    def test_ref_summary_for_note(self, client):
+        bid = self._board(client)
+        body = "x" * 1000
+        nid = client.post(
+            "/api/notes/", json={"title": "Big", "body": body}
+        ).json()["id"]
+        client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "note", "ref_id": nid}
+        )
+        detail = client.get(f"/api/boards/{bid}").json()
+        s = detail["nodes"][0]["ref_summary"]
+        assert s["id"] == nid
+        assert s["title"] == "Big"
+        assert "body_preview" in s
+        assert len(s["body_preview"]) == 400
+
+    def test_card_has_null_ref_summary(self, client):
+        bid = self._board(client)
+        client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "card", "title": "c"}
+        )
+        detail = client.get(f"/api/boards/{bid}").json()
+        assert detail["nodes"][0]["ref_summary"] is None
+
+
+class TestBoardEdges:
+    def _board_with_two_nodes(self, client) -> tuple[int, int, int]:
+        bid = client.post("/api/boards/", json={"name": "B"}).json()["id"]
+        n1 = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "card", "title": "a"}
+        ).json()["id"]
+        n2 = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "card", "title": "b"}
+        ).json()["id"]
+        return bid, n1, n2
+
+    def test_create_edge(self, client):
+        bid, n1, n2 = self._board_with_two_nodes(client)
+        r = client.post(
+            f"/api/boards/{bid}/edges",
+            json={"source_node_id": n1, "target_node_id": n2, "label": "hi"},
+        )
+        assert r.status_code == 201
+        data = r.json()
+        assert data["source_node_id"] == n1
+        assert data["target_node_id"] == n2
+        assert data["label"] == "hi"
+        assert data["style"] == "default"
+
+    def test_reject_self_loop(self, client):
+        bid, n1, _ = self._board_with_two_nodes(client)
+        r = client.post(
+            f"/api/boards/{bid}/edges",
+            json={"source_node_id": n1, "target_node_id": n1},
+        )
+        assert r.status_code == 400
+
+    def test_reject_cross_board_edge(self, client):
+        b1, n1, _ = self._board_with_two_nodes(client)
+        _, other, _ = self._board_with_two_nodes(client)
+        r = client.post(
+            f"/api/boards/{b1}/edges",
+            json={"source_node_id": n1, "target_node_id": other},
+        )
+        assert r.status_code == 400
+
+    def test_patch_edge(self, client):
+        bid, n1, n2 = self._board_with_two_nodes(client)
+        eid = client.post(
+            f"/api/boards/{bid}/edges",
+            json={"source_node_id": n1, "target_node_id": n2},
+        ).json()["id"]
+        r = client.patch(
+            f"/api/boards/{bid}/edges/{eid}", json={"label": "LBL", "style": "bold"}
+        )
+        assert r.status_code == 200
+        assert r.json()["label"] == "LBL"
+        assert r.json()["style"] == "bold"
+
+    def test_delete_edge(self, client):
+        bid, n1, n2 = self._board_with_two_nodes(client)
+        eid = client.post(
+            f"/api/boards/{bid}/edges",
+            json={"source_node_id": n1, "target_node_id": n2},
+        ).json()["id"]
+        assert client.delete(f"/api/boards/{bid}/edges/{eid}").status_code == 204
+        assert len(client.get(f"/api/boards/{bid}").json()["edges"]) == 0
+
+    def test_delete_source_node_cascades_edge(self, client):
+        bid, n1, n2 = self._board_with_two_nodes(client)
+        client.post(
+            f"/api/boards/{bid}/edges",
+            json={"source_node_id": n1, "target_node_id": n2},
+        )
+        client.delete(f"/api/boards/{bid}/nodes/{n1}")
+        assert len(client.get(f"/api/boards/{bid}").json()["edges"]) == 0
