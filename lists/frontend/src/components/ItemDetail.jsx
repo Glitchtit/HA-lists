@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import * as api from '../api'
 import AiJobToast from './AiJobToast'
+import ContextMenu from './ContextMenu'
+import ConfirmDialog from './ConfirmDialog'
+import InlineEditLabel from './InlineEditLabel'
 
 const TONES = ['formal', 'casual', 'concise', 'kind', 'firm']
+const TAG_COLORS = ['#64748b', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']
 
 export default function ItemDetail({ itemId, persons, onChange, onClose }) {
   const [item, setItem] = useState(null)
@@ -13,6 +17,9 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
   const [aiError, setAiError] = useState(null)
   const [breakdownTaskId, setBreakdownTaskId] = useState(null)
   const [tone, setTone] = useState('formal')
+  const [menu, setMenu] = useState(null)           // { kind: 'subtask'|'tag', id|name, x, y }
+  const [confirm, setConfirm] = useState(null)
+  const [editingSubId, setEditingSubId] = useState(null)
 
   useEffect(() => {
     if (!itemId) { setItem(null); setSubtasks([]); return }
@@ -105,6 +112,86 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
     }
   }
 
+  async function deleteSubtaskConfirm(st) {
+    setConfirm({
+      title: `Delete subtask "${st.title}"?`,
+      message: 'This subtask will be permanently deleted.',
+      danger: true,
+      onConfirm: async () => {
+        await api.deleteSubtask(st.id)
+        setConfirm(null)
+        setSubtasks(await api.getSubtasks(item.id))
+      },
+    })
+  }
+
+  async function deleteTagGlobally(name) {
+    const tags = await api.getTags()
+    const tag = tags.find(t => t.name === name)
+    if (!tag) return
+    setConfirm({
+      title: `Delete tag "#${name}" globally?`,
+      message: 'This will remove the tag from every item it is attached to.',
+      danger: true,
+      onConfirm: async () => {
+        await api.deleteTag(tag.id)
+        setConfirm(null)
+        setItem({ ...item, tags: (item.tags || []).filter(t => t !== name) })
+        onChange?.()
+      },
+    })
+  }
+
+  async function renameTag(name) {
+    const fresh = window.prompt(`Rename tag "${name}" to:`, name)
+    if (!fresh || fresh.trim() === '' || fresh === name) return
+    const tags = await api.getTags()
+    const tag = tags.find(t => t.name === name)
+    if (!tag) return
+    try {
+      await api.updateTag(tag.id, { name: fresh.trim() })
+    } catch (e) {
+      if (e.response?.status === 409) {
+        window.alert(`Tag "${fresh}" already exists.`)
+        return
+      }
+      throw e
+    }
+    setItem(await api.getItem(item.id))
+    onChange?.()
+  }
+
+  async function recolorTag(name, color) {
+    const tags = await api.getTags()
+    const tag = tags.find(t => t.name === name)
+    if (!tag) return
+    await api.updateTag(tag.id, { color })
+  }
+
+  const menuSubtask = menu?.kind === 'subtask' ? subtasks.find(s => s.id === menu.id) : null
+  const subtaskMenuItems = menuSubtask ? [
+    { label: 'Rename', icon: '✏️', hint: 'F2', onClick: () => setEditingSubId(menuSubtask.id) },
+    {
+      label: menuSubtask.status === 'completed' ? 'Reopen' : 'Complete', icon: '✔️',
+      onClick: () => toggleSub(menuSubtask),
+    },
+    { separator: true },
+    { label: 'Delete', icon: '🗑️', danger: true, hint: 'Del', onClick: () => deleteSubtaskConfirm(menuSubtask) },
+  ] : []
+
+  const tagMenuItems = menu?.kind === 'tag' ? [
+    { label: 'Rename', icon: '✏️', onClick: () => renameTag(menu.name) },
+    {
+      label: 'Change color', icon: '🎨',
+      children: TAG_COLORS.map(c => ({
+        label: '●', onClick: () => recolorTag(menu.name, c),
+      })),
+    },
+    { label: 'Detach from item', icon: '⊖', onClick: () => removeTag(menu.name) },
+    { separator: true },
+    { label: 'Delete tag globally', icon: '🗑️', danger: true, onClick: () => deleteTagGlobally(menu.name) },
+  ] : []
+
   return (
     <aside className="w-full lg:w-96 bg-surface-1 border-l border-line-1 overflow-y-auto">
       <div className="p-4 border-b border-line-1 flex items-start gap-2">
@@ -177,7 +264,8 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
             {(item.tags || []).map(t => (
               <span
                 key={t}
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-surface-2 border border-line-1 rounded text-xs"
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ kind: 'tag', name: t, x: e.clientX, y: e.clientY }) }}
+                className="inline-flex items-center gap-1 px-2 py-0.5 bg-surface-2 border border-line-1 rounded text-xs cursor-context-menu"
               >
                 #{t}
                 <button onClick={() => removeTag(t)} className="text-ink-4 hover:text-white">×</button>
@@ -239,15 +327,32 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
           {aiError && <div className="mb-2 text-xs text-semantic-danger">{aiError}</div>}
           <ul className="mt-1 space-y-1">
             {subtasks.map(st => (
-              <li key={st.id} className="flex items-center gap-2 text-sm">
+              <li
+                key={st.id}
+                className="flex items-center gap-2 text-sm"
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ kind: 'subtask', id: st.id, x: e.clientX, y: e.clientY }) }}
+              >
                 <input
                   type="checkbox"
                   checked={st.status === 'completed'}
                   onChange={() => toggleSub(st)}
                 />
-                <span className={st.status === 'completed' ? 'line-through text-ink-4' : ''}>
-                  {st.title}
-                </span>
+                {editingSubId === st.id ? (
+                  <InlineEditLabel
+                    value={st.title}
+                    editing
+                    onCommit={async (title) => {
+                      await api.updateSubtask(st.id, { title })
+                      setEditingSubId(null)
+                      setSubtasks(await api.getSubtasks(item.id))
+                    }}
+                    onCancel={() => setEditingSubId(null)}
+                  />
+                ) : (
+                  <span className={st.status === 'completed' ? 'line-through text-ink-4' : ''}>
+                    {st.title}
+                  </span>
+                )}
                 {st.ai_generated && <span title="AI-generated" className="text-xs text-brand-orange-300">✨</span>}
               </li>
             ))}
@@ -274,6 +379,24 @@ export default function ItemDetail({ itemId, persons, onChange, onClose }) {
           onDismiss={() => setBreakdownTaskId(null)}
         />
       )}
+
+      <ContextMenu
+        open={!!menu}
+        x={menu?.x || 0}
+        y={menu?.y || 0}
+        items={menu?.kind === 'subtask' ? subtaskMenuItems : tagMenuItems}
+        onClose={() => setMenu(null)}
+      />
+
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title}
+        message={confirm?.message}
+        confirmLabel={confirm?.danger ? 'Delete' : 'Confirm'}
+        danger={confirm?.danger}
+        onConfirm={confirm?.onConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </aside>
   )
 }
