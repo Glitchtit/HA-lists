@@ -1,3 +1,10 @@
+## 0.9.3
+
+- Global search: press ⌘K / Ctrl+K anywhere to open a palette that searches boards, notes, and card bodies with FTS5 ranking and prefix matching
+- Boards: new 🔗 Backlinks drawer shows every board that portals into this board and every card that wikilinks to it; one click jumps to the source
+- Notes: new `/api/notes/{id}/board_backlinks` endpoint exposes board refs + card mentions for future note-side panels
+- Backend: FTS5 `search_index` auto-populates and stays in sync via triggers on boards / notes / card-kind board_nodes; falls back to LIKE scans on SQLite builds without FTS5
+
 ## 0.9.2
 
 - Boards: new `board` portal node — embed any board on the canvas and double-click to navigate into it

@@ -32,6 +32,7 @@ import FileNode from './nodes/FileNode';
 import GroupNode from './nodes/GroupNode';
 import BoardPortalNode from './nodes/BoardPortalNode';
 import NodeToolbar from './NodeToolbar';
+import BacklinksDrawer from './BacklinksDrawer';
 import './boards.css';
 
 const NODE_TYPES = {
@@ -92,6 +93,7 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   const [error, setError] = useState(null);
   const [viewport, setViewport] = useState(null);
   const [ctxMenu, setCtxMenu] = useState(null); // {type:'node'|'edge', x, y, target}
+  const [backlinksOpen, setBacklinksOpen] = useState(false);
 
   const rf = useReactFlow();
   const wrapperRef = useRef(null);
@@ -760,6 +762,14 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         onUploadFiles={onToolbarUpload}
         onDragStartNew={handleToolbarDragStart}
       />
+      <button
+        className="board-backlinks-toggle"
+        onClick={() => setBacklinksOpen((v) => !v)}
+        title="Show boards and cards that link to this board"
+      >
+        <span>🔗</span>
+        <span>Backlinks</span>
+      </button>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -833,6 +843,13 @@ function BoardCanvas({ boardId, onOpenEntity }) {
             </>
           )}
         </div>
+      )}
+      {backlinksOpen && (
+        <BacklinksDrawer
+          boardId={boardId}
+          onJump={(e) => { setBacklinksOpen(false); onOpenEntity?.(e); }}
+          onClose={() => setBacklinksOpen(false)}
+        />
       )}
     </div>
   );
