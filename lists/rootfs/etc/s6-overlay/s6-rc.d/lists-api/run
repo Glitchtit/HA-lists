@@ -1,0 +1,24 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Lists API – Start the FastAPI backend
+# ==============================================================================
+
+bashio::log.info "Starting Lists API..."
+
+if bashio::config.true 'debug'; then
+    export DEBUG=1
+    bashio::log.info "Debug mode enabled"
+else
+    export DEBUG=0
+fi
+
+export PYTHONUNBUFFERED=1
+
+DATA_DIR="/data"
+export DATA_DIR
+mkdir -p "${DATA_DIR}"
+
+bashio::log.info "Data directory: ${DATA_DIR}"
+
+exec python3 /app/main.py

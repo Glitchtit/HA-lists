@@ -1,0 +1,36 @@
+{
+  "name": "Lists",
+  "version": "0.1.0",
+  "slug": "ha_lists",
+  "description": "Goblin-Tools-style to-do add-on: ad-hoc lists, AI task breakdown, household assignment",
+  "url": "https://github.com/Glitchtit/HA-lists",
+  "arch": [
+    "aarch64",
+    "amd64",
+    "armhf",
+    "armv7",
+    "i386"
+  ],
+  "startup": "application",
+  "boot": "auto",
+  "admin": false,
+  "panel_admin": false,
+  "hassio_api": true,
+  "homeassistant_api": true,
+  "ingress": true,
+  "ingress_port": 8099,
+  "init": false,
+  "panel_icon": "mdi:format-list-checks",
+  "panel_title": "Lists",
+  "map": [
+    "share:rw"
+  ],
+  "options": {
+    "debug": false,
+    "timezone": ""
+  },
+  "schema": {
+    "debug": "bool?",
+    "timezone": "str?"
+  }
+}
