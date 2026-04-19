@@ -1,3 +1,7 @@
+## 0.8.1
+
+- Sidebar: consistent icons for new list (📋), note (📄) and board (🗂️) creation buttons — replaces ambiguous bare +
+
 ## 0.8.0
 
 - Boards: infinite-canvas workspace (reactflow) with List, Note and Card nodes
