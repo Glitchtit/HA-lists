@@ -1,3 +1,8 @@
+## 0.9.7
+
+- Fix board image attachments returning 404 when the URL ends in a file extension (nginx `^~` prefix match for `/api/` prevents static-asset regex from intercepting API routes)
+- Fix board template picker: inserting a template now actually creates the card (null color/width/height values caused Pydantic 422 validation failure, silently swallowed)
+
 ## 0.9.6
 
 - Fix context menus: Change icon and Move to folder submenus are now reachable and their items can be clicked (fixed hover race + mousedown-before-click race with portaled submenus)

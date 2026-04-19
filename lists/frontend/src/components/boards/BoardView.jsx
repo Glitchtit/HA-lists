@@ -641,11 +641,11 @@ function BoardCanvas({ boardId, onOpenEntity }) {
       kind: 'card',
       x: pos.x - 120,
       y: pos.y - 60,
-      width: tpl.width || null,
-      height: tpl.height || null,
+      width: tpl.width || 240,
+      height: tpl.height || 160,
       title: tpl.title || tpl.name || 'New card',
       body: tpl.body_md || '',
-      color: tpl.color || null,
+      color: tpl.color || '',
     });
   }, [insertNode, viewportCenter]);
 
