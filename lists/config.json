@@ -1,6 +1,6 @@
 {
   "name": "Lists",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "slug": "ha_lists",
   "description": "Goblin-Tools-style to-do add-on: ad-hoc lists, AI task breakdown, household assignment",
   "url": "https://github.com/Glitchtit/HA-lists",
