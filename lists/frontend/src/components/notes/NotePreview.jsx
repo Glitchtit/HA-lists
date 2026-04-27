@@ -153,14 +153,14 @@ export default function NotePreview({
     },
     input({ node, ...props }) {
       if (props.type !== 'checkbox') return <input {...props} />;
+      const { checked, ...inputProps } = props;
       const offset = node?.position?.start?.offset;
       return (
         <input
-          {...props}
+          {...inputProps}
           disabled={false}
           readOnly={false}
           onChange={(e) => {
-            e.preventDefault();
             if (onToggleChecklist && typeof offset === 'number') {
               onToggleChecklist(offset);
             }
