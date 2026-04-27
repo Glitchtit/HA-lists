@@ -1,3 +1,7 @@
+## 1.0.3
+
+- Fix sticky card body text: use prose-neutral on light-background cards so body text inherits dark colour
+
 ## 1.0.2
 
 - Fix board card checkboxes: clicking a `- [ ]` checkbox now toggles it (native toggle was blocked by `preventDefault`)
