@@ -197,7 +197,7 @@ export default function NotePreview({
   }), [onWikilinkClick, onEmbedResolve, onToggleChecklist, visitedEmbeds]);
 
   return (
-    <div className={`note-preview prose ${lightBg ? '' : 'prose-invert'} max-w-none text-ink-1 ${isEmbed ? 'note-preview-embed' : ''}`}>
+    <div className={`note-preview ${lightBg ? 'prose-neutral' : 'prose prose-invert'} max-w-none text-ink-1 ${isEmbed ? 'note-preview-embed' : ''}`}>
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
