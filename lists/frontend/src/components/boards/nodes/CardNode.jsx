@@ -158,7 +158,7 @@ function CardNode({ data, selected, id }) {
           />
         ) : (
           <div className="bn-note-body nowheel">
-            <NotePreview body={body || '*Double-click to edit*'} onToggleChecklist={handleToggleChecklist} />
+            <NotePreview body={body || '*Double-click to edit*'} onToggleChecklist={handleToggleChecklist} lightBg={light} />
           </div>
         )}
       </div>
