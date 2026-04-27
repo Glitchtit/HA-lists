@@ -97,6 +97,7 @@ export default function NotePreview({
   visitedEmbeds,
   isEmbed = false,
   simplified = false,
+  lightBg = false,
 }) {
   const remarkPlugins = useMemo(
     () => [remarkGfm, remarkBreaks, remarkMath, remarkEmbed, remarkWikilink, remarkCallout],
@@ -196,7 +197,7 @@ export default function NotePreview({
   }), [onWikilinkClick, onEmbedResolve, onToggleChecklist, visitedEmbeds]);
 
   return (
-    <div className={`note-preview prose prose-invert max-w-none text-ink-1 ${isEmbed ? 'note-preview-embed' : ''}`}>
+    <div className={`note-preview prose ${lightBg ? '' : 'prose-invert'} max-w-none text-ink-1 ${isEmbed ? 'note-preview-embed' : ''}`}>
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
