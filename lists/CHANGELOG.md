@@ -1,3 +1,7 @@
+## 1.0.2
+
+- Fix board card checkboxes: clicking a `- [ ]` checkbox now toggles it (native toggle was blocked by `preventDefault`)
+
 ## 1.0.1
 
 - Board cards now auto-expand vertically to fit all content (height is no longer locked; ReactFlow measures natural DOM height)
