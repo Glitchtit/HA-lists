@@ -186,6 +186,25 @@
 .bn-card.bn-card-light textarea.bn-card-body {
   color: #fff;
 }
+/* Override Tailwind prose colours so body text is dark on light cards */
+/* prose-neutral doesn't set any text colours — everything inherits from parent */
+.bn-card.bn-card-light .note-preview {
+  --tw-prose-body: #111;
+  --tw-prose-headings: #111;
+  --tw-prose-bold: #111;
+  --tw-prose-counters: #111;
+  --tw-prose-bullets: #111;
+  --tw-prose-hr: #999;
+  --tw-prose-quotes: #333;
+  --tw-prose-quote-borders: #999;
+  --tw-prose-captions: #555;
+  --tw-prose-code: #111;
+  --tw-prose-th-borders: #999;
+  --tw-prose-td-borders: #ddd;
+  --tw-prose-links: #1a56db;
+  --tw-prose-pre-code: #e5e7eb;
+  --tw-prose-pre-bg: #1e293b;
+}
 
 
 .bn-card {
