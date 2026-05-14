@@ -10,6 +10,7 @@ import NoteToolbar from './components/notes/NoteToolbar'
 import NotesRightPane from './components/notes/NotesRightPane'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
+import WhatsNewModal from './components/WhatsNewModal'
 
 export default function App() {
   const [folders, setFolders] = useState([])
@@ -241,6 +242,7 @@ export default function App() {
 
   return (
     <div className="h-full flex flex-col md:flex-row">
+      <WhatsNewModal />
       <Sidebar
         folders={folders}
         lists={lists}
