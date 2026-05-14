@@ -1,3 +1,6 @@
+## 1.0.4
+- Add **"What's new"** popup — when you open Lists after an update, a dismissable modal shows the changelog entries for every version released since your last visit. Markers persist per-browser via `localStorage` (`lists_whatsnew_lastSeen`); first visit silently marks the current version as seen so users don't get a wall of historical changelog on first install
+
 ## 1.0.3
 
 - Fix sticky card body text: use prose-neutral on light-background cards so body text inherits dark colour
