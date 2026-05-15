@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import date as date_cls, datetime
 
 from fastapi import APIRouter, HTTPException
 
@@ -95,6 +96,45 @@ async def list_notes(
     sql += " ORDER BY pinned DESC, sort_order, updated_at DESC"
     rows = conn.execute(sql, params).fetchall()
     return [_row_to_note(r) for r in rows]
+
+
+@router.post("/daily", response_model=Note)
+async def get_or_create_daily_note(date: str | None = None, folder_id: int | None = None):
+    """Return today's daily note (or one for a given ISO date), creating it if missing.
+
+    Title format is ``YYYY-MM-DD``. Matching is case-insensitive on the title so
+    that an already-existing note for that day is reused. Body is empty on first
+    create; clients are free to seed it via a follow-up PATCH.
+    """
+    if date is None:
+        iso = datetime.now().strftime("%Y-%m-%d")
+    else:
+        try:
+            iso = date_cls.fromisoformat(date).isoformat()
+        except ValueError as exc:
+            raise HTTPException(400, f"date must be YYYY-MM-DD: {exc}")
+
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT id FROM notes WHERE LOWER(title) = LOWER(?) ORDER BY id ASC LIMIT 1",
+        (iso,),
+    ).fetchone()
+    if row:
+        return await get_note(row["id"])
+
+    if folder_id is not None and not conn.execute(
+        "SELECT 1 FROM folders WHERE id = ?", (folder_id,)
+    ).fetchone():
+        raise HTTPException(400, "folder_id does not exist")
+
+    cursor = conn.execute(
+        """INSERT INTO notes (folder_id, title, body, icon, color, pinned, sort_order)
+           VALUES (?, ?, '', '📅', '', 0, 0)""",
+        (folder_id, iso),
+    )
+    note_id = cursor.lastrowid
+    conn.commit()
+    return await get_note(note_id)
 
 
 @router.get("/resolve")

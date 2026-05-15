@@ -8,7 +8,7 @@ const ICON_CHOICES = ['📁', '📋', '📝', '🛒', '🏠', '💼', '🎯', '�
 const NOTE_ICON_CHOICES = ['📝', '📓', '📒', '📕', '📗', '📘', '📙', '🗒️', '📄', '🧠', '💡', '⭐']
 const BOARD_ICON_CHOICES = ['🧩', '🗺️', '🧠', '🪐', '🧭', '🎛️', '📐', '🗂️', '🔗', '✨', '🌌', '🧱']
 
-export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh }) {
+export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote }) {
   const [newListName, setNewListName] = useState('')
   const [newFolderName, setNewFolderName] = useState('')
   const [newNoteTitle, setNewNoteTitle] = useState('')
@@ -317,13 +317,24 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
     <aside className="w-full md:w-64 bg-surface-2 border-r border-line-1 p-4 overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-display font-bold tracking-tight text-ink-1">📋 Lists</h1>
-        <button
-          onClick={() => setAdding('folder')}
-          className="text-sm text-ink-3 hover:text-ink-1"
-          title="New folder"
-        >
-          + folder
-        </button>
+        <div className="flex items-center gap-2">
+          {onOpenDailyNote && (
+            <button
+              onClick={() => onOpenDailyNote()}
+              className="text-sm text-ink-3 hover:text-ink-1"
+              title="Open today's daily note (Ctrl+Alt+T)"
+            >
+              📅 Today
+            </button>
+          )}
+          <button
+            onClick={() => setAdding('folder')}
+            className="text-sm text-ink-3 hover:text-ink-1"
+            title="New folder"
+          >
+            + folder
+          </button>
+        </div>
       </div>
 
       {adding === 'folder' && (

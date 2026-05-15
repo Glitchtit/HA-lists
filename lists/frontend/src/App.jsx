@@ -206,7 +206,17 @@ export default function App() {
     }
   }
 
-  // ── Keyboard shortcuts (Ctrl+N new note, Ctrl+Enter toggle preview) ──────
+  async function openDailyNote() {
+    try {
+      const n = await api.getOrCreateDailyNote()
+      await loadTopLevel()
+      setActiveEntity({ kind: 'note', id: n.id })
+    } catch (e) {
+      setError(e.message || 'Failed to open daily note')
+    }
+  }
+
+  // ── Keyboard shortcuts (Ctrl+N new note, Ctrl+Enter toggle preview, Ctrl+Alt+T daily note) ──
   useEffect(() => {
     function onKey(e) {
       const t = e.target
@@ -230,6 +240,10 @@ export default function App() {
             setError(err.message || 'Create note failed')
           }
         })()
+      } else if (ctrl && e.altKey && (e.key === 't' || e.key === 'T')) {
+        if (inEditable) return
+        e.preventDefault()
+        openDailyNote()
       } else if (ctrl && e.key === 'Enter') {
         if (activeEntity?.kind !== 'note') return
         e.preventDefault()
@@ -251,6 +265,7 @@ export default function App() {
         activeEntity={activeEntity}
         onSelect={onSelect}
         onRefresh={loadTopLevel}
+        onOpenDailyNote={openDailyNote}
       />
 
       {activeEntity?.kind === 'board' ? (
