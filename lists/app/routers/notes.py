@@ -516,8 +516,12 @@ async def create_note(body: NoteCreate):
 @router.patch("/{note_id}", response_model=Note)
 async def update_note(note_id: int, body: NoteUpdate):
     conn = get_connection()
-    if not conn.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,)).fetchone():
+    existing = conn.execute(
+        "SELECT title FROM notes WHERE id = ?", (note_id,)
+    ).fetchone()
+    if not existing:
         raise HTTPException(404, "Note not found")
+    old_title = existing["title"] or ""
     updates: dict = {}
     raw = body.model_dump(exclude_unset=True)
     for k, v in raw.items():
@@ -534,8 +538,59 @@ async def update_note(note_id: int, body: NoteUpdate):
     apply_update(conn, "notes", note_id, updates)
     if "body" in raw:
         _sync_links(conn, note_id, raw["body"] or "")
-        conn.commit()
+    new_title = raw.get("title")
+    if new_title and new_title != old_title and old_title:
+        _rename_wikilinks(conn, old_title, new_title, exclude_note_id=note_id)
+    conn.commit()
     return await get_note(note_id)
+
+
+_LINK_REGEX_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def _link_re_for(old_title: str) -> re.Pattern[str]:
+    if old_title not in _LINK_REGEX_CACHE:
+        _LINK_REGEX_CACHE[old_title] = re.compile(
+            r"(!?)\[\[" + re.escape(old_title) + r"((?:#[^\]|]*)?)(?:\|([^\]]+))?\]\]",
+            re.IGNORECASE,
+        )
+    return _LINK_REGEX_CACHE[old_title]
+
+
+def _rename_wikilinks(
+    conn: sqlite3.Connection,
+    old_title: str,
+    new_title: str,
+    *,
+    exclude_note_id: int | None = None,
+) -> None:
+    """Rewrite ``[[Old Title]]`` / ``![[Old Title]]`` / ``[[Old Title|alias]]``
+    references in every note's body to point at ``new_title``.
+
+    Preserves the alias half (``|alias``) and any heading anchor (``#Heading``)
+    so links like ``[[Foo|alt]]`` become ``[[NewFoo|alt]]``.
+    """
+    if old_title == new_title or not old_title:
+        return
+    pat = _link_re_for(old_title)
+
+    def _sub(m: re.Match[str]) -> str:
+        prefix, anchor, alias = m.group(1), m.group(2) or "", m.group(3)
+        inside = new_title + anchor + (f"|{alias}" if alias else "")
+        return f"{prefix}[[{inside}]]"
+
+    rows = conn.execute("SELECT id, body FROM notes WHERE body LIKE ?",
+                        (f"%[[%",)).fetchall()
+    for r in rows:
+        if exclude_note_id is not None and r["id"] == exclude_note_id:
+            continue
+        new_body = pat.sub(_sub, r["body"] or "")
+        if new_body != (r["body"] or ""):
+            conn.execute(
+                "UPDATE notes SET body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (new_body, r["id"]),
+            )
+            _sync_links(conn, r["id"], new_body)
 
 
 @router.delete("/{note_id}", status_code=204)

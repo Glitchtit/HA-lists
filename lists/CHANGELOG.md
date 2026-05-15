@@ -1,3 +1,7 @@
+## 1.3.4
+
+- **Smart wikilink rename** — Obsidian's "Update links on rename" behaviour. Renaming a note now rewrites every `[[Old Title]]`, `![[Old Title]]`, `[[Old Title|alias]]`, and `[[Old Title#Heading]]` reference across every other note in one transaction. Case-insensitive matching, alias / heading anchor preserved. note_links rows for affected notes are re-synced so backlinks panel updates without restart
+
 ## 1.3.3
 
 - **Wikilink headings** — Obsidian's `[[Note#Heading]]` syntax. Wikilinks may now include a `#Heading` suffix; clicking such a link opens the target note **and** smooth-scrolls to that heading via the existing `data-heading-slug` attributes the preview already emits. Backlinks resolve to the note as a whole (anchor stripped server-side), so backlink/unlinked-mention tracking stays clean. Works for Ctrl+click background-tab opens too
