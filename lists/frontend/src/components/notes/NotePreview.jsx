@@ -33,7 +33,35 @@ function flattenText(children) {
   return '';
 }
 
-function Embed({ title, onEmbedResolve, onWikilinkClick, onToggleChecklist, visitedEmbeds }) {
+function extractSection(body, anchor) {
+  if (!anchor) return body;
+  const lines = String(body || '').split('\n');
+  const slug = (s) => String(s || '')
+    .toLowerCase().trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+  const targetSlug = slug(anchor);
+  let startLine = -1;
+  let startLevel = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(lines[i]);
+    if (m && slug(m[2]) === targetSlug) {
+      startLine = i;
+      startLevel = m[1].length;
+      break;
+    }
+  }
+  if (startLine === -1) return null;
+  let endLine = lines.length;
+  for (let i = startLine + 1; i < lines.length; i++) {
+    const m = /^(#{1,6})\s+/.exec(lines[i]);
+    if (m && m[1].length <= startLevel) { endLine = i; break; }
+  }
+  return lines.slice(startLine, endLine).join('\n');
+}
+
+function Embed({ title, anchor, onEmbedResolve, onWikilinkClick, onToggleChecklist, visitedEmbeds }) {
   const [state, setState] = useState({ loading: true, note: null });
   useEffect(() => {
     let cancelled = false;
@@ -51,14 +79,28 @@ function Embed({ title, onEmbedResolve, onWikilinkClick, onToggleChecklist, visi
   if (state.loading) {
     return (
       <div className="note-embed note-embed-loading my-2 rounded-lg border border-line-1 bg-surface-2 px-3 py-2 text-xs text-ink-3">
-        Loading embed: {title}…
+        Loading embed: {title}{anchor ? `#${anchor}` : ''}…
       </div>
     );
   }
   if (!state.note) {
     return (
       <div className="note-embed note-embed-missing my-2 rounded-lg border border-dashed border-semantic-warning bg-surface-2 px-3 py-2 text-xs text-ink-3">
-        Embedded note not found: <span className="font-mono">{title}</span>
+        Embedded note not found: <span className="font-mono">{title}{anchor ? `#${anchor}` : ''}</span>
+      </div>
+    );
+  }
+  let sectionBody = state.note.body || '';
+  let sectionMissing = false;
+  if (anchor) {
+    const sec = extractSection(sectionBody, anchor);
+    if (sec === null) sectionMissing = true;
+    else sectionBody = sec;
+  }
+  if (sectionMissing) {
+    return (
+      <div className="note-embed note-embed-missing my-2 rounded-lg border border-dashed border-semantic-warning bg-surface-2 px-3 py-2 text-xs text-ink-3">
+        Heading not found in <span className="font-mono">{title}</span>: <span className="font-mono">#{anchor}</span>
       </div>
     );
   }
@@ -77,11 +119,11 @@ function Embed({ title, onEmbedResolve, onWikilinkClick, onToggleChecklist, visi
     <div className="note-embed my-2 rounded-lg border-l-2 border-brand-cobalt-400 bg-surface-2 px-3 py-2">
       {state.note.title && (
         <div className="note-embed-title mb-1 text-xs font-semibold text-ink-3">
-          ↪ {state.note.title}
+          ↪ {state.note.title}{anchor ? ` # ${anchor}` : ''}
         </div>
       )}
       <NotePreview
-        body={state.note.body || ''}
+        body={sectionBody}
         onWikilinkClick={onWikilinkClick}
         onEmbedResolve={onEmbedResolve}
         onToggleChecklist={onToggleChecklist}
@@ -168,10 +210,12 @@ export default function NotePreview({
     },
     div({ node, className, children, ...props }) {
       const embedTitle = props['data-embed'];
+      const embedAnchor = props['data-embed-anchor'] || node?.properties?.['dataEmbedAnchor'] || '';
       if (embedTitle) {
         return (
           <Embed
             title={embedTitle}
+            anchor={embedAnchor}
             onEmbedResolve={onEmbedResolve}
             onWikilinkClick={onWikilinkClick}
             onToggleChecklist={onToggleChecklist}

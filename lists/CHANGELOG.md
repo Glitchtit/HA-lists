@@ -1,3 +1,7 @@
+## 1.3.5
+
+- **Embed heading section** — `![[Note#Heading]]` now embeds only that section instead of the whole note. The embed extracts from the matching heading until the next heading at the same or lower depth; non-matching anchors render a "Heading not found" warning so typos are obvious. Builds on the wikilink-heading syntax added in 1.3.3
+
 ## 1.3.4
 
 - **Smart wikilink rename** — Obsidian's "Update links on rename" behaviour. Renaming a note now rewrites every `[[Old Title]]`, `![[Old Title]]`, `[[Old Title|alias]]`, and `[[Old Title#Heading]]` reference across every other note in one transaction. Case-insensitive matching, alias / heading anchor preserved. note_links rows for affected notes are re-synced so backlinks panel updates without restart
