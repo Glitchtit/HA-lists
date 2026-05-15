@@ -6,9 +6,11 @@ import { markdown } from '@codemirror/lang-markdown';
 import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { oneDark } from '@codemirror/theme-one-dark';
 
-const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, className = '' }, ref) {
+const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onLinkAutocomplete, className = '' }, ref) {
   const hostRef = useRef(null);
   const viewRef = useRef(null);
+  const onLinkAutocompleteRef = useRef(onLinkAutocomplete);
+  useEffect(() => { onLinkAutocompleteRef.current = onLinkAutocomplete; }, [onLinkAutocomplete]);
 
   useImperativeHandle(ref, () => ({
     getSelection() {
@@ -31,6 +33,15 @@ const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, cla
       });
       view.focus();
     },
+    replaceRange(from, to, text) {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        changes: { from, to, insert: text },
+        selection: { anchor: from + text.length },
+      });
+      view.focus();
+    },
   }), []);
   const onChangeRef = useRef(onChange);
   const onBlurRef = useRef(onBlur);
@@ -44,6 +55,35 @@ const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, cla
     const updateListener = EditorView.updateListener.of((upd) => {
       if (upd.docChanged && onChangeRef.current) {
         onChangeRef.current(upd.state.doc.toString());
+      }
+      if ((upd.docChanged || upd.selectionSet) && onLinkAutocompleteRef.current) {
+        const view = upd.view;
+        const pos = view.state.selection.main.head;
+        const lineStart = view.state.doc.lineAt(pos).from;
+        const before = view.state.doc.sliceString(lineStart, pos);
+        // Find the last [[ on this line that hasn't been closed
+        const open = before.lastIndexOf('[[');
+        if (open === -1) {
+          onLinkAutocompleteRef.current(null);
+          return;
+        }
+        const between = before.slice(open + 2);
+        if (/[\]\n]/.test(between)) {
+          onLinkAutocompleteRef.current(null);
+          return;
+        }
+        const coords = view.coordsAtPos(pos);
+        if (!coords) {
+          onLinkAutocompleteRef.current(null);
+          return;
+        }
+        onLinkAutocompleteRef.current({
+          query: between,
+          x: coords.left,
+          y: coords.bottom + 4,
+          from: lineStart + open,
+          to: pos,
+        });
       }
     });
 
