@@ -1,3 +1,7 @@
+## 1.3.2
+
+- **Vault statistics** — Obsidian's Stats panel equivalent. Click 📊 in the sidebar header to see total notes (active vs archived), folders, lists, boards, distinct tags, wikilinks, aliases, words, and characters across the whole vault. Served by new `GET /api/notes/vault_stats`; word count strips fenced code blocks for a fairer number
+
 ## 1.3.1
 
 - **Slash commands** — type `/` at the start of a new line to open a quick-insert menu, just like Notion / Obsidian's Slash Commander. Choose from H1/H2/H3, bullet/numbered/checklist lists, quote, divider, code block, callout, table, wikilink, embed, today's date, current time. Filter as you type; ArrowUp/Down to navigate, Enter or Tab to insert, Esc to dismiss. Trigger only fires at column 0 so `/` mid-word doesn't disturb URLs or paths
