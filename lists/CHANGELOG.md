@@ -1,3 +1,7 @@
+## 1.2.4
+
+- **Pinned tabs** — right-click a tab to pin (or unpin) it. Pinned tabs render with a 📌 prefix in International Orange, sort to the front of the tab strip, and survive the 12-tab cap when older unpinned tabs would otherwise auto-drop. Mirrors Obsidian's pinned-tab behaviour for "keep this file open while I navigate around"
+
 ## 1.2.3
 
 - **Editable Properties panel** — the YAML frontmatter Properties box above the rendered body is now an inline editor. Click any value to change it, ✕ to remove a key, `+` (or the empty-state button) to add a new property. Values are parsed lightly: `[a, b, c]` becomes a list, `true/false/null/123` get their typed forms, otherwise it's a string. Round-tripped into the note body via a small YAML serializer — your existing block-list `tags:` will normalise to flow form `[a, b]` on next edit

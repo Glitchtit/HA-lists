@@ -117,8 +117,12 @@ export default function App() {
       })
       setTabs((prev) => {
         if (prev.some((t) => t.kind === activeEntity.kind && t.id === activeEntity.id)) return prev
-        const next = [...prev, { kind: activeEntity.kind, id: activeEntity.id }]
-        return next.slice(-12) // cap at 12 tabs
+        const next = [...prev, { kind: activeEntity.kind, id: activeEntity.id, pinned: false }]
+        // Cap at 12, but never drop pinned tabs.
+        if (next.length <= 12) return next
+        const drop = next.findIndex((t) => !t.pinned)
+        if (drop < 0) return next // all pinned — let it grow
+        return [...next.slice(0, drop), ...next.slice(drop + 1)]
       })
     }
   }, [activeEntity?.kind, activeEntity?.id])
@@ -251,6 +255,12 @@ export default function App() {
     })
   }
 
+  function togglePinTab(tab) {
+    setTabs((prev) => prev.map((t) =>
+      t.kind === tab.kind && t.id === tab.id ? { ...t, pinned: !t.pinned } : t
+    ))
+  }
+
   function openRandomNote() {
     const pool = notes.filter((n) => !n.archived)
     if (pool.length === 0) {
@@ -348,6 +358,7 @@ export default function App() {
           boards={boards}
           onSelect={(e) => setActiveEntity(e)}
           onClose={closeTab}
+          onTogglePin={togglePinTab}
         />
         <div className="flex-1 min-h-0 flex">
 
