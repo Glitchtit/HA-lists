@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
@@ -6,9 +6,32 @@ import { markdown } from '@codemirror/lang-markdown';
 import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { oneDark } from '@codemirror/theme-one-dark';
 
-export default function NoteSource({ value, onChange, onBlur, className = '' }) {
+const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, className = '' }, ref) {
   const hostRef = useRef(null);
   const viewRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    getSelection() {
+      const view = viewRef.current;
+      if (!view) return { text: '', from: 0, to: 0 };
+      const sel = view.state.selection.main;
+      return {
+        text: view.state.doc.sliceString(sel.from, sel.to),
+        from: sel.from,
+        to: sel.to,
+      };
+    },
+    replaceSelection(text) {
+      const view = viewRef.current;
+      if (!view) return;
+      const sel = view.state.selection.main;
+      view.dispatch({
+        changes: { from: sel.from, to: sel.to, insert: text },
+        selection: { anchor: sel.from + text.length },
+      });
+      view.focus();
+    },
+  }), []);
   const onChangeRef = useRef(onChange);
   const onBlurRef = useRef(onBlur);
 
@@ -75,4 +98,6 @@ export default function NoteSource({ value, onChange, onBlur, className = '' }) 
   }, [value]);
 
   return <div ref={hostRef} className={`note-source h-full w-full ${className}`} />;
-}
+});
+
+export default NoteSource;

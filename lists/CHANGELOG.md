@@ -1,3 +1,7 @@
+## 1.2.6
+
+- **Extract selection to new note** — Obsidian's note-refactoring command. Select any text in the editor (source or split mode), click ✂️ Extract in the toolbar, name the new note (the first non-heading line is suggested), and: a fresh note is created in the same folder, your selection becomes its body, and the selection in the original note is replaced with a `[[wikilink]]` to the new one. Toast confirms the extraction; sidebar refreshes so the new note shows up immediately
+
 ## 1.2.5
 
 - **Workspaces** — Obsidian's saved-layout feature. Click 💼 in the sidebar header to open the workspaces modal: name your current tab strip + active tab and Save; click any saved entry to restore those tabs (including pin state) and re-activate the entity that was focused. Stored per-browser in `localStorage` (`lists_workspaces`); saving the same name overwrites. Useful for "work mode" vs "writing mode" presets

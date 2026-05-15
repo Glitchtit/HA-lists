@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import NoteSource from './NoteSource';
 import NotePreview from './NotePreview';
+import * as api from '../../api';
 
 function countStats(body) {
   const text = String(body || '');
@@ -41,7 +42,9 @@ export default function NoteEditor({
   onEmbedFetch,
   mode: modeProp,
   onModeChange,
+  onExtracted,
 }) {
+  const sourceRef = useRef(null);
   const [modeState, setModeState] = useState('preview'); // 'split' | 'source' | 'preview'
   const mode = modeProp ?? modeState;
   const setMode = (m) => { if (onModeChange) onModeChange(m); else setModeState(m); };
@@ -76,6 +79,50 @@ export default function NoteEditor({
   };
 
   const stats = useMemo(() => countStats(draftBody), [draftBody]);
+
+  async function extractSelection() {
+    if (mode === 'preview') {
+      // Selection is in CodeMirror — make sure it's mounted.
+      return null;
+    }
+    const ref = sourceRef.current;
+    if (!ref) return null;
+    const sel = ref.getSelection();
+    if (!sel.text || !sel.text.trim()) {
+      if (typeof window !== 'undefined') {
+        window.alert('Select some text in the editor first.');
+      }
+      return null;
+    }
+    const firstLine = sel.text.split('\n', 1)[0].replace(/^#+\s+/, '').trim();
+    const suggested = firstLine.slice(0, 80) || 'Extracted note';
+    const title = window.prompt('New note title:', suggested);
+    if (!title) return null;
+    try {
+      const created = await api.createNote({
+        title: title.trim(),
+        body: sel.text,
+        folder_id: note.folder_id ?? null,
+      });
+      ref.replaceSelection(`[[${created.title}]]`);
+      onExtracted && onExtracted(created);
+      return created;
+    } catch (e) {
+      if (typeof window !== 'undefined') {
+        window.alert(e?.response?.data?.detail || e.message || 'Failed to extract');
+      }
+      return null;
+    }
+  }
+
+  // Expose extractor on window for the toolbar (simple bus — avoids
+  // threading a ref through App.jsx for one button).
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    window.__listsExtractSelection = extractSelection;
+    return () => { if (window.__listsExtractSelection === extractSelection) delete window.__listsExtractSelection; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.id, mode, draftBody]);
 
   if (!note) {
     return (
@@ -114,6 +161,7 @@ export default function NoteEditor({
         {mode !== 'preview' && (
           <div className={`min-w-0 ${mode === 'split' ? 'w-1/2 border-r border-line-1' : 'w-full'}`}>
             <NoteSource
+              ref={sourceRef}
               value={draftBody}
               onChange={(v) => setDraftBody(v)}
               onBlur={(v) => commitBody(v)}
