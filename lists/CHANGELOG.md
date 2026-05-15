@@ -1,3 +1,7 @@
+## 1.1.5
+
+- **Unlinked mentions** — Obsidian-style sister panel to backlinks. The Backlinks tab now shows two sections: actual wikilink/embed references *and* a new "Unlinked mentions" group of notes whose body contains this note's title (or any alias) literally but doesn't link to it. Word-boundary matching so `Project Atlas` doesn't match `XProject Atlas2`; mentions that already appear in brackets are filtered out so you only see text that *could* be linked. Served by new `GET /api/notes/{id}/unlinked_mentions`
+
 ## 1.1.4
 
 - **Folder notes** — pin one note as a folder's "index" page, just like the Obsidian Folder Notes community plugin. Right-click a folder → **Set folder note** to pick any note inside it; the folder header then becomes a clickable dotted-underline link that opens that note. Right-click again to change or clear. Backend: `folders.folder_note_id` (nullable FK with `ON DELETE SET NULL`) + idempotent migration for existing DBs; PATCH validates the referenced note exists

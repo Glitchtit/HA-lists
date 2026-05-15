@@ -576,6 +576,45 @@ class TestNotes:
         edges = client.get("/api/notes/graph").json()["edges"]
         assert any(e["source"] == a and e["target"] == b for e in edges)
 
+    def test_unlinked_mentions(self, client):
+        target = client.post("/api/notes/", json={"title": "Project Atlas"}).json()["id"]
+        # Linked: mentions and wikilinks → should NOT appear in unlinked
+        client.post("/api/notes/", json={
+            "title": "Notes A",
+            "body": "Working on [[Project Atlas]] this week",
+        })
+        # Unlinked: mentions literally but no wikilink
+        b = client.post("/api/notes/", json={
+            "title": "Notes B",
+            "body": "We talked about Project Atlas at standup",
+        }).json()["id"]
+        # Substring-only: should not match (word boundary)
+        client.post("/api/notes/", json={
+            "title": "Notes C",
+            "body": "The XProject Atlas2 was different",
+        })
+        # Case insensitive
+        d = client.post("/api/notes/", json={
+            "title": "Notes D",
+            "body": "Long history of project atlas across teams.",
+        }).json()["id"]
+        # Alias resolution
+        client.post(f"/api/notes/{target}/aliases", json={"alias": "PA-2026"})
+        e = client.post("/api/notes/", json={
+            "title": "Notes E",
+            "body": "Ref PA-2026 here",
+        }).json()["id"]
+
+        r = client.get(f"/api/notes/{target}/unlinked_mentions")
+        assert r.status_code == 200
+        ids = {entry["note_id"] for entry in r.json()}
+        assert b in ids and d in ids and e in ids
+        # Linked note must not appear
+        link_ids = {entry["note_id"] for entry in r.json()}
+        linked_titles = [entry["title"] for entry in r.json()]
+        assert "Notes A" not in linked_titles
+        assert "Notes C" not in linked_titles  # word-boundary excluded
+
     def test_tag_aggregation_inline_and_frontmatter(self, client):
         client.post("/api/notes/", json={
             "title": "T1",
