@@ -23,12 +23,17 @@ export default function remarkEmbed() {
         if (m.index > last) {
           out.push({ type: 'text', value: value.slice(last, m.index) });
         }
-        const target = m[1].trim();
+        const raw = m[1].trim();
+        const hashIdx = raw.indexOf('#');
+        const target = hashIdx === -1 ? raw : raw.slice(0, hashIdx).trim();
+        const anchor = hashIdx === -1 ? '' : raw.slice(hashIdx + 1).trim();
+        const hProps = { className: 'note-embed', 'data-embed': target };
+        if (anchor) hProps['data-embed-anchor'] = anchor;
         out.push({
           type: 'noteEmbed',
           data: {
             hName: 'div',
-            hProperties: { className: 'note-embed', 'data-embed': target },
+            hProperties: hProps,
             hChildren: [],
           },
           children: [],
