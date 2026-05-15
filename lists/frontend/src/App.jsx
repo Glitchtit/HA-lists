@@ -29,6 +29,9 @@ export default function App() {
   const [editorMode, setEditorMode] = useState('preview') // 'split'|'source'|'preview'
   const [noteBodyVersion, setNoteBodyVersion] = useState(0)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [recent, setRecent] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lists_recent') || '[]') } catch { return [] }
+  })
 
   useEffect(() => {
     const onKey = (e) => {
@@ -98,6 +101,12 @@ export default function App() {
       setActiveItemId(null)
       loadNote(activeEntity.id)
     }
+    setRecent((prev) => {
+      const filtered = prev.filter((e) => !(e.kind === activeEntity.kind && e.id === activeEntity.id))
+      const next = [{ kind: activeEntity.kind, id: activeEntity.id, ts: Date.now() }, ...filtered].slice(0, 10)
+      try { localStorage.setItem('lists_recent', JSON.stringify(next)) } catch {}
+      return next
+    })
   }, [activeEntity?.kind, activeEntity?.id])
 
   const activeList = activeEntity?.kind === 'list' ? (lists.find(l => l.id === activeEntity.id) || null) : null
@@ -266,6 +275,7 @@ export default function App() {
         onSelect={onSelect}
         onRefresh={loadTopLevel}
         onOpenDailyNote={openDailyNote}
+        recent={recent}
       />
 
       {activeEntity?.kind === 'board' ? (

@@ -8,7 +8,7 @@ const ICON_CHOICES = ['📁', '📋', '📝', '🛒', '🏠', '💼', '🎯', '�
 const NOTE_ICON_CHOICES = ['📝', '📓', '📒', '📕', '📗', '📘', '📙', '🗒️', '📄', '🧠', '💡', '⭐']
 const BOARD_ICON_CHOICES = ['🧩', '🗺️', '🧠', '🪐', '🧭', '🎛️', '📐', '🗂️', '🔗', '✨', '🌌', '🧱']
 
-export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote }) {
+export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote, recent = [] }) {
   const [newListName, setNewListName] = useState('')
   const [newFolderName, setNewFolderName] = useState('')
   const [newNoteTitle, setNewNoteTitle] = useState('')
@@ -134,6 +134,22 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
   const activeListId = activeEntity?.kind === 'list' ? activeEntity.id : null
   const activeNoteId = activeEntity?.kind === 'note' ? activeEntity.id : null
   const activeBoardId = activeEntity?.kind === 'board' ? activeEntity.id : null
+
+  const recentResolved = recent.map((r) => {
+    if (r.kind === 'list') {
+      const l = lists.find(x => x.id === r.id && !x.archived)
+      return l ? { ...r, title: l.name, icon: l.icon || '📋' } : null
+    }
+    if (r.kind === 'note') {
+      const n = notes.find(x => x.id === r.id && !x.archived)
+      return n ? { ...r, title: n.title || 'Untitled note', icon: n.icon || '📄' } : null
+    }
+    if (r.kind === 'board') {
+      const b = boards.find(x => x.id === r.id && !x.archived)
+      return b ? { ...r, title: b.name, icon: b.icon || '🗂️' } : null
+    }
+    return null
+  }).filter(Boolean).slice(0, 5)
 
   const menuFolder = menu?.kind === 'folder' ? folders.find(f => f.id === menu.id) : null
   const menuList = menu?.kind === 'list' ? lists.find(l => l.id === menu.id) : null
@@ -348,6 +364,35 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
           />
           <button className="px-2 text-sm bg-brand-cobalt text-white rounded hover:bg-brand-cobalt-400">Add</button>
         </form>
+      )}
+
+      {recentResolved.length > 0 && (
+        <div className="mb-4 pb-3 border-b border-line-1">
+          <div className="flex items-center justify-between text-xs uppercase text-ink-4 mb-1">
+            <span>🕘 Recent</span>
+          </div>
+          <ul className="space-y-0.5">
+            {recentResolved.map((r) => {
+              const isActive = activeEntity?.kind === r.kind && activeEntity.id === r.id
+              return (
+                <li key={`${r.kind}-${r.id}`}>
+                  <button
+                    onClick={() => onSelect && onSelect({ kind: r.kind, id: r.id })}
+                    className={`w-full text-left px-2 py-1 text-sm rounded flex items-center gap-2 truncate ${
+                      isActive
+                        ? 'bg-brand-cobalt/15 text-ink-1'
+                        : 'text-ink-2 hover:bg-surface-3 hover:text-ink-1'
+                    }`}
+                    title={r.title}
+                  >
+                    <span className="shrink-0">{r.icon}</span>
+                    <span className="truncate">{r.title}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
 
       {folders.map(folder => (

@@ -1,3 +1,7 @@
+## 1.0.7
+
+- **Recent files** — sidebar now shows a 🕘 Recent section listing the last five lists/notes/boards you opened, ordered most-recent-first. Clicking jumps back to that entity; archived and deleted entries auto-fall out. State persists per-browser in `localStorage` (`lists_recent`), mirroring Obsidian's Recent Files core plugin
+
 ## 1.0.6
 
 - **Word & character count** — the note editor now shows a live `N words · N characters` status bar at the bottom of the workspace, just like Obsidian's footer. Counts strip code fences, inline code, callout markers, and wikilink brackets so the number reflects prose, not markdown plumbing
