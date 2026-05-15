@@ -678,6 +678,35 @@ class TestNotes:
         assert "Notes A" not in linked_titles
         assert "Notes C" not in linked_titles  # word-boundary excluded
 
+    def test_tag_rename(self, client):
+        client.post("/api/notes/", json={
+            "title": "A",
+            "body": "Has #old and #other tags",
+        })
+        client.post("/api/notes/", json={
+            "title": "B",
+            "body": "---\ntags: [old, foo]\n---\n#old #unrelated",
+        })
+        client.post("/api/notes/", json={
+            "title": "C",
+            "body": "Inside `#old` should still get hit since it's inline-code, but a fence:\n```\n#old in code stays\n```\nand plain #old in prose",
+        })
+        r = client.post("/api/notes/tags/rename", json={"old": "old", "new": "new-name"})
+        assert r.status_code == 200
+        assert r.json()["updated"] == 3
+        # Verify changes
+        notes = {n["title"]: n["body"] for n in client.get("/api/notes/").json()}
+        assert "#new-name" in notes["A"] and "#old" not in notes["A"]
+        assert "[new-name, foo]" in notes["B"] or "new-name" in notes["B"]
+        # Fenced code block leaves the literal "#old in code stays" intact
+        assert "#old in code stays" in notes["C"]
+        # Out-of-fence prose got rewritten
+        assert "#new-name in prose" in notes["C"]
+
+    def test_tag_rename_validates_new(self, client):
+        r = client.post("/api/notes/tags/rename", json={"old": "a", "new": "bad tag!"})
+        assert r.status_code == 400
+
     def test_tag_aggregation_inline_and_frontmatter(self, client):
         client.post("/api/notes/", json={
             "title": "T1",

@@ -1,3 +1,7 @@
+## 1.3.6
+
+- **Tag rename (bulk)** — Obsidian's "Rename tag" command. Hover any row in the Tags pane and click ✏️ to rename it; backend rewrites every inline `#oldtag` and every frontmatter `tags:` entry (flow or block-list form) across all non-archived notes in one transaction. Fenced code blocks are left alone so `#old` inside `\`\`\`` survives. New tag is validated (letters, digits, `_`, `-`, `/`); `note_links` resync runs automatically so the pane refreshes immediately
+
 ## 1.3.5
 
 - **Embed heading section** — `![[Note#Heading]]` now embeds only that section instead of the whole note. The embed extracts from the matching heading until the next heading at the same or lower depth; non-matching anchors render a "Heading not found" warning so typos are obvious. Builds on the wikilink-heading syntax added in 1.3.3
