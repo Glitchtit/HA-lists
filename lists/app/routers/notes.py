@@ -186,6 +186,63 @@ def _extract_tags_from_body(body: str) -> set[str]:
     return tags
 
 
+@router.post("/tags/rename")
+async def rename_tag(body: dict):
+    """Bulk-rename ``#old`` → ``#new`` across every non-archived note body.
+
+    Updates both inline hashtags (word-boundary safe; respects fenced code
+    blocks) and the frontmatter ``tags:`` field (both flow and block list
+    forms). Returns ``{"updated": N}`` — number of notes touched. The new
+    tag value is also validated (alphanumerics + ``_-/``).
+    """
+    old = str(body.get("old", "")).strip().lstrip("#")
+    new = str(body.get("new", "")).strip().lstrip("#")
+    if not old or not new:
+        raise HTTPException(400, "old and new must be non-empty")
+    if old == new:
+        return {"updated": 0}
+    if not re.fullmatch(r"[A-Za-z0-9][\w/-]*", new):
+        raise HTTPException(400, "new tag may only contain letters, digits, _, -, /")
+    conn = get_connection()
+    inline_re = re.compile(rf"(?<![\w/])#{re.escape(old)}(?![\w/-])")
+    updated = 0
+    for r in conn.execute(
+        "SELECT id, body FROM notes WHERE archived = 0 AND body LIKE ?",
+        (f"%{old}%",),
+    ).fetchall():
+        original = r["body"] or ""
+        # Inline hashtags (skip fenced code blocks)
+        def _rewrite_outside_fences(text: str) -> str:
+            pieces = _FENCE_RE.split(text)
+            fences = _FENCE_RE.findall(text)
+            out_parts = []
+            for i, piece in enumerate(pieces):
+                out_parts.append(inline_re.sub(f"#{new}", piece))
+                if i < len(fences):
+                    out_parts.append(fences[i])
+            return "".join(out_parts)
+        new_body = _rewrite_outside_fences(original)
+        # Frontmatter tags: substitute by parsing-aware regex on the YAML block
+        front = _FRONTMATTER_RE.match(new_body)
+        if front:
+            yaml_block = front.group(1)
+            # Replace as a bare word inside flow list, block list bullet, or scalar value
+            tag_quoted_re = re.compile(rf"(\b|['\"]){re.escape(old)}(\b|['\"])")
+            yaml_block_new = yaml_block.replace(f"#{old}", f"#{new}")
+            yaml_block_new = tag_quoted_re.sub(rf"\g<1>{new}\g<2>", yaml_block_new)
+            if yaml_block_new != yaml_block:
+                new_body = new_body[:front.start(1)] + yaml_block_new + new_body[front.end(1):]
+        if new_body != original:
+            conn.execute(
+                "UPDATE notes SET body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (new_body, r["id"]),
+            )
+            _sync_links(conn, r["id"], new_body)
+            updated += 1
+    conn.commit()
+    return {"updated": updated}
+
+
 @router.get("/tags")
 async def get_note_tags():
     """Aggregate Obsidian-style tags from all non-archived note bodies.

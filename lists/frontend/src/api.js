@@ -102,6 +102,8 @@ export const removeNoteAlias = (noteId, alias) =>
 export const getNoteGraph = () => api.get('/notes/graph').then(r => r.data);
 export const getVaultStats = () => api.get('/notes/vault_stats').then(r => r.data);
 export const getNoteTags = () => api.get('/notes/tags').then(r => r.data);
+export const renameNoteTag = (oldName, newName) =>
+  api.post('/notes/tags/rename', { old: oldName, new: newName }).then(r => r.data);
 export const getNoteTemplates = (params = {}) =>
   api.get('/note-templates/', { params }).then(r => r.data);
 export const createNoteTemplate = (payload) =>

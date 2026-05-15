@@ -56,15 +56,37 @@ export default function TagsPane({ onSelect }) {
           const isOpen = expanded === entry.tag;
           return (
             <li key={entry.tag}>
-              <button
-                onClick={() => toggle(entry.tag)}
-                className={`w-full flex items-center justify-between gap-2 px-2 py-1 text-sm rounded text-left ${
-                  isOpen ? 'bg-brand-cobalt/15 text-ink-1' : 'text-ink-2 hover:bg-surface-3 hover:text-ink-1'
-                }`}
-              >
-                <span className="truncate font-mono text-brand-cobalt-300">#{entry.tag}</span>
-                <span className="shrink-0 text-xs text-ink-4 tabular-nums">{entry.count}</span>
-              </button>
+              <div className={`group w-full flex items-center justify-between gap-2 px-2 py-1 text-sm rounded ${
+                isOpen ? 'bg-brand-cobalt/15 text-ink-1' : 'text-ink-2 hover:bg-surface-3 hover:text-ink-1'
+              }`}>
+                <button
+                  onClick={() => toggle(entry.tag)}
+                  className="flex-1 text-left flex items-center justify-between gap-2"
+                >
+                  <span className="truncate font-mono text-brand-cobalt-300">#{entry.tag}</span>
+                  <span className="shrink-0 text-xs text-ink-4 tabular-nums">{entry.count}</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    const next = window.prompt(`Rename #${entry.tag} to:`, entry.tag)
+                    if (!next || next.trim() === entry.tag) return
+                    try {
+                      await api.renameNoteTag(entry.tag, next.trim())
+                      const fresh = await api.getNoteTags()
+                      setTags(fresh)
+                      setNotesById({})
+                      setExpanded(null)
+                    } catch (e) {
+                      window.alert(e?.response?.data?.detail || e.message || 'Rename failed')
+                    }
+                  }}
+                  className="shrink-0 ml-1 text-ink-4 hover:text-ink-1 opacity-0 group-hover:opacity-100 text-xs"
+                  aria-label={`Rename tag #${entry.tag}`}
+                  title="Rename tag"
+                >
+                  ✏️
+                </button>
+              </div>
               {isOpen && (
                 <ul className="ml-3 mt-1 mb-2 space-y-0.5 border-l border-line-1 pl-2">
                   {entry.note_ids.map((nid) => {
