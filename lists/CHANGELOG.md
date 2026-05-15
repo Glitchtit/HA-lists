@@ -1,3 +1,7 @@
+## 1.1.0
+
+- **YAML frontmatter / Properties** — notes that start with a `---` fence block now render the parsed key/value pairs as a "Properties" panel above the body, just like Obsidian. Supports scalars (string, number, bool, null), flow lists (`tags: [a, b]`), and block lists (`tags:\n  - a\n  - b`). Common keys get a leading emoji (🏷️ tags, 🪪 aliases, 📅 date, 👤 author, 🚦 status, ⭐ priority). The frontmatter block is hidden from the rendered markdown and excluded from the editor's word count
+
 ## 1.0.9
 
 - **Note aliases** — alternative names that wikilinks resolve to, mirroring Obsidian's frontmatter `aliases:`. New `note_aliases` table + `/api/notes/{id}/aliases` GET/POST/DELETE endpoints; `/api/notes/resolve` now falls back to alias lookup, so `[[Alt Name]]` jumps to the canonical note. Right-pane gains an Aliases tab to add/remove aliases inline; collisions with an existing note title return 409 so the canonical title always wins

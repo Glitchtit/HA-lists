@@ -5,9 +5,11 @@ import NotePreview from './NotePreview';
 function countStats(body) {
   const text = String(body || '');
   const chars = text.length;
-  // Strip code fences, inline code, callout markers, and wikilink/embed
-  // brackets so the word count reflects prose, not markdown plumbing.
+  // Strip frontmatter, code fences, inline code, callout markers, and
+  // wikilink/embed brackets so the word count reflects prose, not
+  // markdown plumbing.
   const stripped = text
+    .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, ' ')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`[^`]*`/g, ' ')
     .replace(/!?\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t, a) => a || t)

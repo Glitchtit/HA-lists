@@ -12,6 +12,8 @@ import remarkWikilink from './remarkWikilink';
 import remarkEmbed from './remarkEmbed';
 import remarkCallout from './remarkCallout';
 import MermaidBlock from './MermaidBlock';
+import PropertiesPanel from './PropertiesPanel';
+import { parseFrontmatter } from './frontmatter';
 
 function slugify(text) {
   return String(text || '')
@@ -196,14 +198,17 @@ export default function NotePreview({
     h6: makeHeading('h6'),
   }), [onWikilinkClick, onEmbedResolve, onToggleChecklist, visitedEmbeds]);
 
+  const { props, body: cleanBody } = useMemo(() => parseFrontmatter(body || ''), [body]);
+
   return (
     <div className={`note-preview ${lightBg ? 'prose-neutral' : 'prose prose-invert'} max-w-none text-ink-1 ${isEmbed ? 'note-preview-embed' : ''}`}>
+      {!isEmbed && <PropertiesPanel props={props} />}
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
         components={components}
       >
-        {body || ''}
+        {cleanBody}
       </ReactMarkdown>
     </div>
   );
