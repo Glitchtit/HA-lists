@@ -72,7 +72,7 @@ export default function TagsPane({ onSelect }) {
                     return (
                       <li key={nid}>
                         <button
-                          onClick={() => onSelect && onSelect({ kind: 'note', id: nid })}
+                          onClick={() => onSelect && onSelect(nid)}
                           className="w-full text-left px-2 py-0.5 text-xs rounded text-ink-3 hover:bg-surface-3 hover:text-ink-1 truncate"
                           title={n?.title || `Note ${nid}`}
                         >

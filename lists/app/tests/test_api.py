@@ -576,6 +576,23 @@ class TestNotes:
         edges = client.get("/api/notes/graph").json()["edges"]
         assert any(e["source"] == a and e["target"] == b for e in edges)
 
+    def test_outgoing_links_resolve_and_unresolved(self, client):
+        a = client.post("/api/notes/", json={"title": "A", "body": "[[B]] then ![[Ghost]]"}).json()["id"]
+        b = client.post("/api/notes/", json={"title": "B"}).json()["id"]
+        c = client.post("/api/notes/", json={"title": "Bee"}).json()["id"]
+        client.post(f"/api/notes/{c}/aliases", json={"alias": "Bumble"})
+        # Add an alias-resolving link too
+        client.patch(f"/api/notes/{a}", json={"body": "[[B]] then ![[Ghost]] and ![[Bumble]]"})
+
+        r = client.get(f"/api/notes/{a}/outgoing")
+        assert r.status_code == 200
+        by_target = {row["target_title"]: row for row in r.json()}
+        assert by_target["B"]["note_id"] == b
+        assert by_target["B"]["link_type"] == "wikilink"
+        assert by_target["Ghost"]["note_id"] is None
+        assert by_target["Ghost"]["link_type"] == "embed"
+        assert by_target["Bumble"]["note_id"] == c
+
     def test_unlinked_mentions(self, client):
         target = client.post("/api/notes/", json={"title": "Project Atlas"}).json()["id"]
         # Linked: mentions and wikilinks → should NOT appear in unlinked
