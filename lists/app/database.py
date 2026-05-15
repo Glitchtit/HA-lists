@@ -65,6 +65,7 @@ def _migrate(conn: sqlite3.Connection) -> None:
     _migrate_note_aliases(conn)
     _migrate_folder_note_id(conn)
     _seed_board_templates(conn)
+    _seed_note_templates(conn)
 
 
 def _migrate_folder_note_id(conn: sqlite3.Connection) -> None:
@@ -431,6 +432,20 @@ CREATE TABLE IF NOT EXISTS board_edges (
 );
 CREATE INDEX IF NOT EXISTS idx_board_edges_board ON board_edges(board_id);
 
+CREATE TABLE IF NOT EXISTS note_templates (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT    NOT NULL,
+    icon        TEXT    DEFAULT '📝',
+    title_tpl   TEXT    DEFAULT '',
+    body_md     TEXT    NOT NULL DEFAULT '',
+    category    TEXT    DEFAULT 'general',
+    is_system   INTEGER DEFAULT 0,
+    sort_order  INTEGER DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_note_templates_category ON note_templates(category);
+
 CREATE TABLE IF NOT EXISTS board_templates (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT    NOT NULL,
@@ -541,5 +556,125 @@ def _seed_board_templates(conn: sqlite3.Connection) -> None:
                 t["name"], t["icon"], t["color"], t["body_md"], t["title"],
                 t["width"], t["height"], t["category"], i,
             ),
+        )
+    conn.commit()
+
+
+NOTE_SYSTEM_TEMPLATES = [
+    {
+        "name": "Daily journal",
+        "icon": "📅",
+        "title_tpl": "{{date}}",
+        "category": "daily",
+        "body_md": (
+            "# {{date}}\n\n"
+            "## Today's focus\n\n- \n\n"
+            "## Notes\n\n\n"
+            "## Highlights\n\n- \n\n"
+            "## Tomorrow\n\n- \n"
+        ),
+    },
+    {
+        "name": "Meeting note",
+        "icon": "🤝",
+        "title_tpl": "Meeting — {{date}}",
+        "category": "work",
+        "body_md": (
+            "# {{title}}\n\n"
+            "**Date:** {{date}}  \n**Attendees:** \n\n"
+            "## Agenda\n\n- \n\n"
+            "## Discussion\n\n\n"
+            "## Decisions\n\n- \n\n"
+            "## Action items\n\n- [ ] \n"
+        ),
+    },
+    {
+        "name": "Book review",
+        "icon": "📚",
+        "title_tpl": "Book — ",
+        "category": "personal",
+        "body_md": (
+            "---\n"
+            "tags: [books, review]\n"
+            "rating: \n"
+            "author: \n"
+            "---\n\n"
+            "## Summary\n\n\n"
+            "## Key ideas\n\n- \n\n"
+            "## Quotes\n\n> \n\n"
+            "## My take\n\n"
+        ),
+    },
+    {
+        "name": "Project brief",
+        "icon": "🎯",
+        "title_tpl": "Project — ",
+        "category": "work",
+        "body_md": (
+            "---\n"
+            "status: planning\n"
+            "owner: \n"
+            "due: \n"
+            "tags: [project]\n"
+            "---\n\n"
+            "## Goal\n\n\n"
+            "## Why now\n\n\n"
+            "## Success criteria\n\n- [ ] \n\n"
+            "## Milestones\n\n- [ ] \n\n"
+            "## Risks\n\n- \n\n"
+            "## Open questions\n\n- \n"
+        ),
+    },
+    {
+        "name": "Bug report",
+        "icon": "🐛",
+        "title_tpl": "Bug — ",
+        "category": "work",
+        "body_md": (
+            "---\n"
+            "status: open\n"
+            "severity: \n"
+            "tags: [bug]\n"
+            "---\n\n"
+            "## Summary\n\n\n"
+            "## Steps to reproduce\n\n1. \n2. \n3. \n\n"
+            "## Expected\n\n\n"
+            "## Actual\n\n\n"
+            "## Environment\n\n- \n"
+        ),
+    },
+    {
+        "name": "Cornell notes",
+        "icon": "📓",
+        "title_tpl": "",
+        "category": "study",
+        "body_md": (
+            "## Topic\n\n\n"
+            "| Cue | Notes |\n"
+            "|---|---|\n"
+            "|  |  |\n"
+            "|  |  |\n\n"
+            "## Summary\n\n"
+        ),
+    },
+]
+
+
+def _seed_note_templates(conn: sqlite3.Connection) -> None:
+    """Insert built-in note templates once. Idempotent: keyed on name."""
+    have = {
+        r["name"]
+        for r in conn.execute(
+            "SELECT name FROM note_templates WHERE is_system = 1"
+        ).fetchall()
+    }
+    for i, t in enumerate(NOTE_SYSTEM_TEMPLATES):
+        if t["name"] in have:
+            continue
+        conn.execute(
+            """INSERT INTO note_templates
+                 (name, icon, title_tpl, body_md, category, is_system, sort_order)
+               VALUES (?, ?, ?, ?, ?, 1, ?)""",
+            (t["name"], t["icon"], t["title_tpl"], t["body_md"], t["category"], i),
         )
     conn.commit()

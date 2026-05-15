@@ -8,7 +8,7 @@ const ICON_CHOICES = ['📁', '📋', '📝', '🛒', '🏠', '💼', '🎯', '�
 const NOTE_ICON_CHOICES = ['📝', '📓', '📒', '📕', '📗', '📘', '📙', '🗒️', '📄', '🧠', '💡', '⭐']
 const BOARD_ICON_CHOICES = ['🧩', '🗺️', '🧠', '🪐', '🧭', '🎛️', '📐', '🗂️', '🔗', '✨', '🌌', '🧱']
 
-export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote, onOpenRandomNote, recent = [] }) {
+export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote, onOpenRandomNote, onOpenTemplatePicker, recent = [] }) {
   const [newListName, setNewListName] = useState('')
   const [newFolderName, setNewFolderName] = useState('')
   const [newNoteTitle, setNewNoteTitle] = useState('')
@@ -384,6 +384,16 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
               aria-label="Open random note"
             >
               🎲
+            </button>
+          )}
+          {onOpenTemplatePicker && (
+            <button
+              onClick={() => onOpenTemplatePicker()}
+              className="text-sm text-ink-3 hover:text-ink-1"
+              title="New note from template"
+              aria-label="New note from template"
+            >
+              📋
             </button>
           )}
           <button

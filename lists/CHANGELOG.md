@@ -1,3 +1,7 @@
+## 1.1.7
+
+- **Note templates** — Obsidian-style template library for new notes (separate from the board templates added in 0.9.4). Six seeded system templates: Daily journal, Meeting note, Book review, Project brief, Bug report, Cornell notes. Click 📋 in the sidebar header to open the picker; selecting a template creates a note in the same folder you're working in, with `{{date}}`, `{{time}}`, `{{title}}`, `{{datetime}}`, and parameterised `{{date:%Y-%m}}`-style variables substituted. CRUD endpoints under `/api/note-templates/` let you save your own templates; system templates are read-only
+
 ## 1.1.6
 
 - **Pinned (Bookmarks) sidebar section** — Obsidian's Bookmarks pane equivalent. The sidebar now surfaces a top-level 📌 Pinned section above Recent, listing every pinned note and board (alphabetically) so you can jump back to important docs with one click. Pin/unpin via the existing right-click context menu — no schema changes; the section just elevates the existing `pinned` flag
