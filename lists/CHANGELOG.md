@@ -1,3 +1,7 @@
+## 1.2.7
+
+- **Custom CSS snippets** — Obsidian's appearance-snippets feature. Click 🎨 in the sidebar header to paste arbitrary CSS that gets injected into a single `<style id="lists-custom-css">` tag in `<head>`. Persists per-browser in `localStorage` (`lists_custom_css`); applied automatically on every load. Use the existing CSS variables and class hooks like `.note-preview`, `.wikilink`, `var(--brand-orange)` to restyle the app without touching code
+
 ## 1.2.6
 
 - **Extract selection to new note** — Obsidian's note-refactoring command. Select any text in the editor (source or split mode), click ✂️ Extract in the toolbar, name the new note (the first non-heading line is suggested), and: a fresh note is created in the same folder, your selection becomes its body, and the selection in the original note is replaced with a `[[wikilink]]` to the new one. Toast confirms the extraction; sidebar refreshes so the new note shows up immediately
