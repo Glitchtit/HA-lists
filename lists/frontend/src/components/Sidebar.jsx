@@ -8,7 +8,7 @@ const ICON_CHOICES = ['📁', '📋', '📝', '🛒', '🏠', '💼', '🎯', '�
 const NOTE_ICON_CHOICES = ['📝', '📓', '📒', '📕', '📗', '📘', '📙', '🗒️', '📄', '🧠', '💡', '⭐']
 const BOARD_ICON_CHOICES = ['🧩', '🗺️', '🧠', '🪐', '🧭', '🎛️', '📐', '🗂️', '🔗', '✨', '🌌', '🧱']
 
-export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote, recent = [] }) {
+export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote, onOpenRandomNote, recent = [] }) {
   const [newListName, setNewListName] = useState('')
   const [newFolderName, setNewFolderName] = useState('')
   const [newNoteTitle, setNewNoteTitle] = useState('')
@@ -341,6 +341,16 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
               title="Open today's daily note (Ctrl+Alt+T)"
             >
               📅 Today
+            </button>
+          )}
+          {onOpenRandomNote && (
+            <button
+              onClick={() => onOpenRandomNote()}
+              className="text-sm text-ink-3 hover:text-ink-1"
+              title="Open a random note"
+              aria-label="Open random note"
+            >
+              🎲
             </button>
           )}
           <button
