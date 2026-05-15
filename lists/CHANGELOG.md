@@ -1,3 +1,7 @@
+## 1.1.9
+
+- **Export note to `.md`** — new ⬇️ .md button in the note toolbar downloads the current note as a UTF-8 markdown file. Filename is the sanitised note title (no path separators or wildcards, capped at 120 chars). Body gets an H1 prepended if the title isn't already the first heading, so the export round-trips nicely to other markdown apps
+
 ## 1.1.8
 
 - **Outgoing links pane** — symmetric counterpart to backlinks. The right pane now has an "Outgoing" tab listing every wikilink / embed in the current note, with each target resolved to its note (via title-or-alias lookup) and a clear "unresolved" badge for dangling links. Embeds are tinted orange to match the graph view's edge colours. Backed by new `GET /api/notes/{id}/outgoing`
