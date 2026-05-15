@@ -127,6 +127,7 @@ export default function NoteEditor({
               onWikilinkClick={onWikilinkClick}
               onEmbedResolve={onEmbedFetch}
               onToggleChecklist={handleToggleChecklist}
+              onBodyChange={(next) => { setDraftBody(next); commitBody(next); }}
               visitedEmbeds={new Set(note.id != null ? [note.id] : [])}
             />
           </div>

@@ -27,6 +27,50 @@ function parseFlowList(raw) {
   return inner.split(',').map((s) => parseScalar(s));
 }
 
+function quoteScalar(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'boolean') return String(v);
+  if (typeof v === 'number') return String(v);
+  const s = String(v);
+  // Quote when necessary (contains special chars or starts/ends with whitespace)
+  if (/^[\sA-Za-z0-9._\-/+:?@!]*$/.test(s) && s.trim() === s && s !== '') {
+    if (['true', 'false', 'null', '~'].includes(s)) return `"${s}"`;
+    if (/^-?\d+(\.\d+)?$/.test(s)) return `"${s}"`;
+    return s;
+  }
+  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+export function serializeFrontmatter(props) {
+  if (!props || typeof props !== 'object') return '';
+  const keys = Object.keys(props);
+  if (keys.length === 0) return '';
+  const lines = ['---'];
+  for (const k of keys) {
+    const v = props[k];
+    if (Array.isArray(v)) {
+      lines.push(`${k}: [${v.map(quoteScalar).join(', ')}]`);
+    } else {
+      lines.push(`${k}: ${quoteScalar(v)}`);
+    }
+  }
+  lines.push('---');
+  return lines.join('\n');
+}
+
+export function setFrontmatter(body, props) {
+  const block = serializeFrontmatter(props);
+  if (typeof body !== 'string') return block ? block + '\n\n' : '';
+  const match = body.match(FENCE);
+  if (match) {
+    const rest = body.slice(match[0].length);
+    if (!block) return rest.replace(/^\r?\n/, '');
+    return block + '\n' + rest.replace(/^\r?\n/, '');
+  }
+  if (!block) return body;
+  return block + '\n\n' + body;
+}
+
 export function parseFrontmatter(body) {
   if (typeof body !== 'string') return { props: null, body: '' };
   const match = body.match(FENCE);

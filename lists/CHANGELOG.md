@@ -1,3 +1,7 @@
+## 1.2.3
+
+- **Editable Properties panel** — the YAML frontmatter Properties box above the rendered body is now an inline editor. Click any value to change it, ✕ to remove a key, `+` (or the empty-state button) to add a new property. Values are parsed lightly: `[a, b, c]` becomes a list, `true/false/null/123` get their typed forms, otherwise it's a string. Round-tripped into the note body via a small YAML serializer — your existing block-list `tags:` will normalise to flow form `[a, b]` on next edit
+
 ## 1.2.2
 
 - **Find in note (Ctrl+F)** — wired up CodeMirror's official `@codemirror/search` extension, so the editor now exposes a full-featured search panel with case-sensitivity, whole-word, regex, replace, and prev/next navigation. Ctrl+F from preview mode auto-switches the editor to Split so the search panel is visible. Selection-match highlighting is on by default
