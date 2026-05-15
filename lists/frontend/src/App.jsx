@@ -390,6 +390,7 @@ export default function App() {
               onChange={handleNoteChange}
               onWikilinkClick={handleWikilinkClick}
               onEmbedFetch={handleEmbedFetch}
+              onExtracted={() => { loadTopLevel(); flashToast('Extracted to new note') }}
             />
           </div>
         </div>

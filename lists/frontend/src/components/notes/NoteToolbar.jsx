@@ -110,6 +110,17 @@ export default function NoteToolbar({ note, onAction, lists = [] }) {
       {btn('extract-tasks', 'Extract tasks', () => setListPickerOpen(true))}
       {btn('outline', 'Outline')}
 
+      <span className="ml-2 text-[11px] uppercase tracking-wider text-ink-3">Refactor</span>
+      <button
+        type="button"
+        disabled={!note}
+        onClick={() => typeof window !== 'undefined' && window.__listsExtractSelection?.()}
+        className="inline-flex items-center gap-1.5 rounded-md border border-line-1 bg-surface-2 px-2.5 py-1 text-xs text-ink-2 hover:bg-surface-3 disabled:opacity-50"
+        title="Extract selected text to a new note, leaving a [[wikilink]] in its place. Requires source / split mode."
+      >
+        ✂️ Extract
+      </button>
+
       <span className="ml-2 text-[11px] uppercase tracking-wider text-ink-3">Export</span>
       <button
         type="button"
