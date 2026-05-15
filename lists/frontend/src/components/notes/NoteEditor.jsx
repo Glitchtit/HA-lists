@@ -1,6 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import NoteSource from './NoteSource';
 import NotePreview from './NotePreview';
+
+function countStats(body) {
+  const text = String(body || '');
+  const chars = text.length;
+  // Strip code fences, inline code, callout markers, and wikilink/embed
+  // brackets so the word count reflects prose, not markdown plumbing.
+  const stripped = text
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]*`/g, ' ')
+    .replace(/!?\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t, a) => a || t)
+    .replace(/^>\s*\[![^\]]+\][+-]?/gm, ' ')
+    .replace(/[#*_~>`-]/g, ' ');
+  const words = stripped.trim() ? stripped.trim().split(/\s+/).length : 0;
+  return { words, chars };
+}
 
 function toggleChecklistAt(body, offset) {
   if (typeof offset !== 'number' || offset < 0 || offset >= body.length) return body;
@@ -58,6 +73,8 @@ export default function NoteEditor({
     }
   };
 
+  const stats = useMemo(() => countStats(draftBody), [draftBody]);
+
   if (!note) {
     return (
       <div className="flex h-full items-center justify-center text-ink-3 text-sm">
@@ -112,6 +129,12 @@ export default function NoteEditor({
             />
           </div>
         )}
+      </div>
+
+      <div className="flex items-center justify-end gap-3 border-t border-line-1 bg-surface-1 px-4 py-1 text-xs text-ink-4 font-mono">
+        <span title="Word count">{stats.words.toLocaleString()} {stats.words === 1 ? 'word' : 'words'}</span>
+        <span className="text-ink-4/60">·</span>
+        <span title="Character count">{stats.chars.toLocaleString()} {stats.chars === 1 ? 'character' : 'characters'}</span>
       </div>
     </div>
   );

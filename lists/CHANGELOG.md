@@ -1,3 +1,7 @@
+## 1.0.6
+
+- **Word & character count** — the note editor now shows a live `N words · N characters` status bar at the bottom of the workspace, just like Obsidian's footer. Counts strip code fences, inline code, callout markers, and wikilink brackets so the number reflects prose, not markdown plumbing
+
 ## 1.0.5
 
 - **Daily notes** — Obsidian-style date-titled notes for journaling. Click 📅 Today in the sidebar header, or press `Ctrl+Alt+T` from anywhere, to open today's note (auto-created on first use with title `YYYY-MM-DD` and 📅 icon). New `POST /api/notes/daily?date=YYYY-MM-DD` endpoint creates-or-returns a daily note for any date, so future calendar / weekly views can hook into it
