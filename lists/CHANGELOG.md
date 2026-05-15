@@ -1,3 +1,7 @@
+## 1.2.1
+
+- **Keyboard shortcuts cheat-sheet** — press `?` anywhere outside an input to open a modal listing every keybinding the app knows about, grouped by Navigation / Editing / Boards. Mirrors Obsidian's hotkeys help overlay. Press `Esc` (or click outside) to dismiss
+
 ## 1.2.0
 
 - **Tabs** — multiple lists / notes / boards stay open across the top of the workspace, just like Obsidian's tabs. Opening any entity adds it to the tab strip (capped at 12, oldest dropped); the active tab is highlighted in cobalt and shows the entity icon + title. Click a tab to switch, click ✕ to close — closing the active tab falls back to the previous one. Tabs for archived/deleted entities render dimmed so you can still close them
