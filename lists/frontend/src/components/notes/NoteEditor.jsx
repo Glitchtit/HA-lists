@@ -3,6 +3,7 @@ import NoteSource from './NoteSource';
 import NotePreview from './NotePreview';
 import WikilinkSuggest, { invalidateNoteCache } from './WikilinkSuggest';
 import TagSuggest, { invalidateTagCache } from './TagSuggest';
+import SlashSuggest from './SlashSuggest';
 import * as api from '../../api';
 
 function countStats(body) {
@@ -50,6 +51,7 @@ export default function NoteEditor({
   const sourceRef = useRef(null);
   const [linkTrigger, setLinkTrigger] = useState(null);
   const [tagTrigger, setTagTrigger] = useState(null);
+  const [slashTrigger, setSlashTrigger] = useState(null);
 
   // Refresh autocomplete caches when a note saves (title might have changed)
   useEffect(() => { invalidateNoteCache(); invalidateTagCache(); }, [note?.id, note?.title]);
@@ -175,6 +177,7 @@ export default function NoteEditor({
               onBlur={(v) => commitBody(v)}
               onLinkAutocomplete={setLinkTrigger}
               onTagAutocomplete={setTagTrigger}
+              onSlashAutocomplete={setSlashTrigger}
             />
           </div>
         )}
@@ -214,6 +217,18 @@ export default function NoteEditor({
           setTagTrigger(null);
         }}
         onClose={() => setTagTrigger(null)}
+      />
+      <SlashSuggest
+        trigger={slashTrigger}
+        onPick={(cmd) => {
+          const ref = sourceRef.current;
+          if (ref && slashTrigger) {
+            const text = typeof cmd.snippet === 'function' ? cmd.snippet() : cmd.snippet;
+            ref.replaceRange(slashTrigger.from, slashTrigger.to, text);
+          }
+          setSlashTrigger(null);
+        }}
+        onClose={() => setSlashTrigger(null)}
       />
 
       <div className="flex items-center justify-end gap-3 border-t border-line-1 bg-surface-1 px-4 py-1 text-xs text-ink-4 font-mono">
