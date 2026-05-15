@@ -14,6 +14,7 @@ import remarkCallout from './remarkCallout';
 import MermaidBlock from './MermaidBlock';
 import PropertiesPanel from './PropertiesPanel';
 import Wikilink from './Wikilink';
+import DataviewBlock from './DataviewBlock';
 import { parseFrontmatter } from './frontmatter';
 
 function slugify(text) {
@@ -138,6 +139,7 @@ export default function NotePreview({
   body,
   onWikilinkClick,
   onWikilinkOpenInBackground,
+  onNoteSelect,
   onEmbedResolve,
   onToggleChecklist,
   onBodyChange,
@@ -183,6 +185,17 @@ export default function NotePreview({
           return <span className="text-xs text-ink-3 italic">📊 Diagram</span>;
         }
         return <MermaidBlock code={text} />;
+      }
+      if (!inline && lang && lang[1] === 'dataview') {
+        if (simplified) {
+          return <span className="text-xs text-ink-3 italic">🔍 Dataview</span>;
+        }
+        return (
+          <DataviewBlock
+            code={text}
+            onSelect={(id) => onNoteSelect && onNoteSelect(id)}
+          />
+        );
       }
       if (inline) {
         return <code className={className} {...props}>{children}</code>;
@@ -235,7 +248,7 @@ export default function NotePreview({
     h4: makeHeading('h4'),
     h5: makeHeading('h5'),
     h6: makeHeading('h6'),
-  }), [onWikilinkClick, onWikilinkOpenInBackground, onEmbedResolve, onToggleChecklist, visitedEmbeds]);
+  }), [onWikilinkClick, onWikilinkOpenInBackground, onNoteSelect, onEmbedResolve, onToggleChecklist, visitedEmbeds]);
 
   const { props, body: cleanBody } = useMemo(() => parseFrontmatter(body || ''), [body]);
 

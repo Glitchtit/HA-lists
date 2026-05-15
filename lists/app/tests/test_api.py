@@ -599,6 +599,31 @@ class TestNotes:
         assert "[[NewName]]" in x["body"]
         assert "[[NewName|x]]" in x["body"]
 
+    def test_query_by_tag_and_folder(self, client):
+        fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        a = client.post("/api/notes/", json={"title": "A", "body": "has #foo", "folder_id": fid}).json()["id"]
+        b = client.post("/api/notes/", json={"title": "B", "body": "has #foo"}).json()["id"]
+        client.post("/api/notes/", json={"title": "C", "body": "has #bar", "folder_id": fid})
+        # Tag filter
+        r = client.post("/api/notes/query", json={"tag": "foo"}).json()
+        ids = sorted(x["id"] for x in r)
+        assert ids == sorted([a, b])
+        # Tag + folder filter
+        r2 = client.post("/api/notes/query", json={"tag": "foo", "folder_id": fid}).json()
+        assert [x["id"] for x in r2] == [a]
+        # Unfiled
+        r3 = client.post("/api/notes/query", json={"tag": "foo", "folder_id": None}).json()
+        assert [x["id"] for x in r3] == [b]
+
+    def test_query_limit_and_sort(self, client):
+        for i in range(5):
+            client.post("/api/notes/", json={"title": f"N{i}", "body": "#tag"})
+        r = client.post("/api/notes/query", json={"tag": "tag", "limit": 3}).json()
+        assert len(r) == 3
+        # Default sort is title ascending
+        titles = [x["title"] for x in r]
+        assert titles == sorted(titles)
+
     def test_vault_stats(self, client):
         client.post("/api/notes/", json={"title": "A", "body": "Hello world #tag1 [[B]]"})
         b = client.post("/api/notes/", json={"title": "B", "body": "B content #tag2"}).json()["id"]
