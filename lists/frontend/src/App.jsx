@@ -13,6 +13,7 @@ import NoteTemplatePicker from './components/notes/NoteTemplatePicker'
 import TabBar from './components/TabBar'
 import HotkeysModal from './components/HotkeysModal'
 import WorkspacesModal from './components/WorkspacesModal'
+import CustomCSSModal, { applyStoredCSS } from './components/CustomCSSModal'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -41,6 +42,10 @@ export default function App() {
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
   const [hotkeysOpen, setHotkeysOpen] = useState(false)
   const [workspacesOpen, setWorkspacesOpen] = useState(false)
+  const [cssOpen, setCssOpen] = useState(false)
+
+  // Apply user CSS once on mount; survives across sessions.
+  useEffect(() => { applyStoredCSS() }, [])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -349,6 +354,7 @@ export default function App() {
         onOpenRandomNote={openRandomNote}
         onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
         onOpenWorkspaces={() => setWorkspacesOpen(true)}
+        onOpenCustomCSS={() => setCssOpen(true)}
         recent={recent}
       />
 
@@ -439,6 +445,7 @@ export default function App() {
         onJump={(e) => setActiveEntity(e)}
       />
       <HotkeysModal open={hotkeysOpen} onClose={() => setHotkeysOpen(false)} />
+      <CustomCSSModal open={cssOpen} onClose={() => setCssOpen(false)} />
       <WorkspacesModal
         open={workspacesOpen}
         onClose={() => setWorkspacesOpen(false)}
