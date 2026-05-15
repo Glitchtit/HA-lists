@@ -61,6 +61,12 @@ def extract_wikilinks(body: str) -> list[tuple[str, str]]:
 
         matches.sort(key=lambda t: t[0])
         for _, title, kind in matches:
+            # Strip optional ``#Heading`` anchor so backlinks resolve to the
+            # note as a whole. The anchor only matters for UI scroll.
+            if "#" in title:
+                title = title.split("#", 1)[0].strip()
+                if not title:
+                    continue
             key = (title, kind)
             if key in seen:
                 continue

@@ -4,7 +4,16 @@ const HOVER_DELAY_MS = 350;
 const POPUP_WIDTH = 360;
 const POPUP_MAX_HEIGHT = 320;
 
-export default function Wikilink({ title, onClick, onResolve, onOpenInBackground, children }) {
+function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+export default function Wikilink({ title, anchor = '', onClick, onResolve, onOpenInBackground, children }) {
   const [hovered, setHovered] = useState(false);
   const [note, setNote] = useState(null);
   const [pos, setPos] = useState(null);
@@ -65,16 +74,16 @@ export default function Wikilink({ title, onClick, onResolve, onOpenInBackground
           e.preventDefault();
           e.stopPropagation();
           if ((e.ctrlKey || e.metaKey) && onOpenInBackground) {
-            onOpenInBackground(title);
+            onOpenInBackground(title, anchor);
             return;
           }
-          onClick && onClick(title);
+          onClick && onClick(title, anchor);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            if ((e.ctrlKey || e.metaKey) && onOpenInBackground) onOpenInBackground(title);
-            else onClick && onClick(title);
+            if ((e.ctrlKey || e.metaKey) && onOpenInBackground) onOpenInBackground(title, anchor);
+            else onClick && onClick(title, anchor);
           }
         }}
         onMouseEnter={startHover}

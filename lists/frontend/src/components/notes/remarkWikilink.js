@@ -20,13 +20,18 @@ export default function remarkWikilink() {
         if (m.index > last) {
           out.push({ type: 'text', value: value.slice(last, m.index) });
         }
-        const target = m[1].trim();
+        const rawTarget = m[1].trim();
+        const hashIdx = rawTarget.indexOf('#');
+        const target = hashIdx === -1 ? rawTarget : rawTarget.slice(0, hashIdx).trim();
+        const anchor = hashIdx === -1 ? '' : rawTarget.slice(hashIdx + 1).trim();
         const alias = (m[2] || m[1]).trim();
+        const hProps = { 'data-wikilink': target, className: 'wikilink' };
+        if (anchor) hProps['data-wikilink-anchor'] = anchor;
         out.push({
           type: 'link',
           url: '#wikilink',
           title: null,
-          data: { hProperties: { 'data-wikilink': target, className: 'wikilink' } },
+          data: { hProperties: hProps },
           children: [{ type: 'text', value: alias }],
         });
         last = m.index + m[0].length;

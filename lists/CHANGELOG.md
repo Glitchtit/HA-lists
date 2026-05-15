@@ -1,3 +1,7 @@
+## 1.3.3
+
+- **Wikilink headings** — Obsidian's `[[Note#Heading]]` syntax. Wikilinks may now include a `#Heading` suffix; clicking such a link opens the target note **and** smooth-scrolls to that heading via the existing `data-heading-slug` attributes the preview already emits. Backlinks resolve to the note as a whole (anchor stripped server-side), so backlink/unlinked-mention tracking stays clean. Works for Ctrl+click background-tab opens too
+
 ## 1.3.2
 
 - **Vault statistics** — Obsidian's Stats panel equivalent. Click 📊 in the sidebar header to see total notes (active vs archived), folders, lists, boards, distinct tags, wikilinks, aliases, words, and characters across the whole vault. Served by new `GET /api/notes/vault_stats`; word count strips fenced code blocks for a fairer number
