@@ -135,6 +135,15 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
   const activeNoteId = activeEntity?.kind === 'note' ? activeEntity.id : null
   const activeBoardId = activeEntity?.kind === 'board' ? activeEntity.id : null
 
+  const pinned = []
+  for (const n of notes) {
+    if (!n.archived && n.pinned) pinned.push({ kind: 'note', id: n.id, title: n.title || 'Untitled note', icon: n.icon || '📄' })
+  }
+  for (const b of boards) {
+    if (!b.archived && b.pinned) pinned.push({ kind: 'board', id: b.id, title: b.name, icon: b.icon || '🗂️' })
+  }
+  pinned.sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
+
   const recentResolved = recent.map((r) => {
     if (r.kind === 'list') {
       const l = lists.find(x => x.id === r.id && !x.archived)
@@ -406,6 +415,35 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
           />
           <button className="px-2 text-sm bg-brand-cobalt text-white rounded hover:bg-brand-cobalt-400">Add</button>
         </form>
+      )}
+
+      {pinned.length > 0 && (
+        <div className="mb-4 pb-3 border-b border-line-1">
+          <div className="flex items-center justify-between text-xs uppercase text-ink-4 mb-1">
+            <span>📌 Pinned</span>
+          </div>
+          <ul className="space-y-0.5">
+            {pinned.map((p) => {
+              const isActive = activeEntity?.kind === p.kind && activeEntity.id === p.id
+              return (
+                <li key={`${p.kind}-${p.id}`}>
+                  <button
+                    onClick={() => onSelect && onSelect({ kind: p.kind, id: p.id })}
+                    className={`w-full text-left px-2 py-1 text-sm rounded flex items-center gap-2 truncate ${
+                      isActive
+                        ? 'bg-brand-cobalt/15 text-ink-1'
+                        : 'text-ink-2 hover:bg-surface-3 hover:text-ink-1'
+                    }`}
+                    title={p.title}
+                  >
+                    <span className="shrink-0">{p.icon}</span>
+                    <span className="truncate">{p.title}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
 
       {recentResolved.length > 0 && (

@@ -1,3 +1,7 @@
+## 1.1.6
+
+- **Pinned (Bookmarks) sidebar section** — Obsidian's Bookmarks pane equivalent. The sidebar now surfaces a top-level 📌 Pinned section above Recent, listing every pinned note and board (alphabetically) so you can jump back to important docs with one click. Pin/unpin via the existing right-click context menu — no schema changes; the section just elevates the existing `pinned` flag
+
 ## 1.1.5
 
 - **Unlinked mentions** — Obsidian-style sister panel to backlinks. The Backlinks tab now shows two sections: actual wikilink/embed references *and* a new "Unlinked mentions" group of notes whose body contains this note's title (or any alias) literally but doesn't link to it. Word-boundary matching so `Project Atlas` doesn't match `XProject Atlas2`; mentions that already appear in brackets are filtered out so you only see text that *could* be linked. Served by new `GET /api/notes/{id}/unlinked_mentions`
