@@ -225,6 +225,21 @@ export default function App() {
     }
   }
 
+  function openRandomNote() {
+    const pool = notes.filter((n) => !n.archived)
+    if (pool.length === 0) {
+      flashToast('No notes to pick from')
+      return
+    }
+    let pick = pool[Math.floor(Math.random() * pool.length)]
+    if (pool.length > 1 && activeEntity?.kind === 'note' && pick.id === activeEntity.id) {
+      const others = pool.filter((n) => n.id !== activeEntity.id)
+      pick = others[Math.floor(Math.random() * others.length)]
+    }
+    setActiveEntity({ kind: 'note', id: pick.id })
+    flashToast(`🎲 ${pick.title || 'Untitled note'}`)
+  }
+
   // ── Keyboard shortcuts (Ctrl+N new note, Ctrl+Enter toggle preview, Ctrl+Alt+T daily note) ──
   useEffect(() => {
     function onKey(e) {
@@ -275,6 +290,7 @@ export default function App() {
         onSelect={onSelect}
         onRefresh={loadTopLevel}
         onOpenDailyNote={openDailyNote}
+        onOpenRandomNote={openRandomNote}
         recent={recent}
       />
 

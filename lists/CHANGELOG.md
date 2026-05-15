@@ -1,3 +1,7 @@
+## 1.0.8
+
+- **Random note** — new 🎲 button in the sidebar header opens a uniformly-random non-archived note (skipping the currently-open one when possible). Mirrors Obsidian's Random Note core plugin; useful for surprise re-discovery of older notes
+
 ## 1.0.7
 
 - **Recent files** — sidebar now shows a 🕘 Recent section listing the last five lists/notes/boards you opened, ordered most-recent-first. Clicking jumps back to that entity; archived and deleted entries auto-fall out. State persists per-browser in `localStorage` (`lists_recent`), mirroring Obsidian's Recent Files core plugin
