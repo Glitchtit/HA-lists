@@ -6,13 +6,15 @@ import { markdown } from '@codemirror/lang-markdown';
 import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { oneDark } from '@codemirror/theme-one-dark';
 
-const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onLinkAutocomplete, onTagAutocomplete, className = '' }, ref) {
+const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onLinkAutocomplete, onTagAutocomplete, onSlashAutocomplete, className = '' }, ref) {
   const hostRef = useRef(null);
   const viewRef = useRef(null);
   const onLinkAutocompleteRef = useRef(onLinkAutocomplete);
   useEffect(() => { onLinkAutocompleteRef.current = onLinkAutocomplete; }, [onLinkAutocomplete]);
   const onTagAutocompleteRef = useRef(onTagAutocomplete);
   useEffect(() => { onTagAutocompleteRef.current = onTagAutocomplete; }, [onTagAutocomplete]);
+  const onSlashAutocompleteRef = useRef(onSlashAutocomplete);
+  useEffect(() => { onSlashAutocompleteRef.current = onSlashAutocomplete; }, [onSlashAutocomplete]);
 
   useImperativeHandle(ref, () => ({
     getSelection() {
@@ -100,10 +102,29 @@ const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onL
                 from,
                 to: pos,
               });
+              handled = true;
+            }
+          }
+          if (!handled) onTagAutocompleteRef.current(null);
+        }
+        // Slash trigger: '/word' at the start of a line (column 0)
+        if (!handled && onSlashAutocompleteRef.current) {
+          const slashMatch = /^\/([A-Za-z]*)$/.exec(before);
+          if (slashMatch) {
+            const from = lineStart;
+            const coords = view.coordsAtPos(pos);
+            if (coords) {
+              onSlashAutocompleteRef.current({
+                query: slashMatch[1],
+                x: coords.left,
+                y: coords.bottom + 4,
+                from,
+                to: pos,
+              });
               return;
             }
           }
-          onTagAutocompleteRef.current(null);
+          onSlashAutocompleteRef.current(null);
         }
       }
     });

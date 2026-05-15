@@ -1,3 +1,7 @@
+## 1.3.1
+
+- **Slash commands** — type `/` at the start of a new line to open a quick-insert menu, just like Notion / Obsidian's Slash Commander. Choose from H1/H2/H3, bullet/numbered/checklist lists, quote, divider, code block, callout, table, wikilink, embed, today's date, current time. Filter as you type; ArrowUp/Down to navigate, Enter or Tab to insert, Esc to dismiss. Trigger only fires at column 0 so `/` mid-word doesn't disturb URLs or paths
+
 ## 1.3.0
 
 - **Open wikilink in background tab** — Ctrl/Cmd-click any `[[wikilink]]` in the preview to open the target in a new tab *without* navigating away from your current note. Mirrors Obsidian's "Open in new tab" gesture. Toast confirms the new tab opens; existing pin/cap behaviour applies
