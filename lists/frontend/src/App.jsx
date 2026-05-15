@@ -10,6 +10,7 @@ import NoteToolbar from './components/notes/NoteToolbar'
 import NotesRightPane from './components/notes/NotesRightPane'
 import NoteGraph from './components/notes/NoteGraph'
 import NoteTemplatePicker from './components/notes/NoteTemplatePicker'
+import TabBar from './components/TabBar'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -34,6 +35,7 @@ export default function App() {
   const [recent, setRecent] = useState(() => {
     try { return JSON.parse(localStorage.getItem('lists_recent') || '[]') } catch { return [] }
   })
+  const [tabs, setTabs] = useState([]) // [{kind, id}]
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
 
   useEffect(() => {
@@ -110,6 +112,11 @@ export default function App() {
         const next = [{ kind: activeEntity.kind, id: activeEntity.id, ts: Date.now() }, ...filtered].slice(0, 10)
         try { localStorage.setItem('lists_recent', JSON.stringify(next)) } catch {}
         return next
+      })
+      setTabs((prev) => {
+        if (prev.some((t) => t.kind === activeEntity.kind && t.id === activeEntity.id)) return prev
+        const next = [...prev, { kind: activeEntity.kind, id: activeEntity.id }]
+        return next.slice(-12) // cap at 12 tabs
       })
     }
   }, [activeEntity?.kind, activeEntity?.id])
@@ -230,6 +237,18 @@ export default function App() {
     }
   }
 
+  function closeTab(tab) {
+    setTabs((prev) => {
+      const next = prev.filter((t) => !(t.kind === tab.kind && t.id === tab.id))
+      const isActive = activeEntity?.kind === tab.kind && activeEntity.id === tab.id
+      if (isActive) {
+        const fallback = next[next.length - 1]
+        setActiveEntity(fallback ? { kind: fallback.kind, id: fallback.id } : null)
+      }
+      return next
+    })
+  }
+
   function openRandomNote() {
     const pool = notes.filter((n) => !n.archived)
     if (pool.length === 0) {
@@ -300,6 +319,18 @@ export default function App() {
         recent={recent}
       />
 
+      <div className="flex-1 min-w-0 flex flex-col">
+        <TabBar
+          tabs={tabs}
+          activeEntity={activeEntity}
+          lists={lists}
+          notes={notes}
+          boards={boards}
+          onSelect={(e) => setActiveEntity(e)}
+          onClose={closeTab}
+        />
+        <div className="flex-1 min-h-0 flex">
+
       {activeEntity?.kind === 'graph' ? (
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="border-b border-line-1 bg-surface-1 px-4 py-2 text-sm text-ink-2">
@@ -354,6 +385,8 @@ export default function App() {
           onClose={() => setActiveItemId(null)}
         />
       )}
+        </div>
+      </div>
 
       {error && (
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-[rgba(239,68,68,0.18)] text-semantic-danger px-3 py-2 rounded text-sm">
