@@ -11,6 +11,7 @@ import NotesRightPane from './components/notes/NotesRightPane'
 import NoteGraph from './components/notes/NoteGraph'
 import NoteTemplatePicker from './components/notes/NoteTemplatePicker'
 import TabBar from './components/TabBar'
+import HotkeysModal from './components/HotkeysModal'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -37,6 +38,7 @@ export default function App() {
   })
   const [tabs, setTabs] = useState([]) // [{kind, id}]
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const [hotkeysOpen, setHotkeysOpen] = useState(false)
 
   useEffect(() => {
     const onKey = (e) => {
@@ -292,6 +294,12 @@ export default function App() {
         if (inEditable) return
         e.preventDefault()
         openDailyNote()
+      } else if (e.key === '?' && !ctrl && !e.altKey) {
+        if (inEditable) return
+        e.preventDefault()
+        setHotkeysOpen(true)
+      } else if (e.key === 'Escape' && hotkeysOpen) {
+        setHotkeysOpen(false)
       } else if (ctrl && e.key === 'Enter') {
         if (activeEntity?.kind !== 'note') return
         e.preventDefault()
@@ -300,7 +308,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [activeEntity?.kind, activeEntity?.id, activeNote, activeList])
+  }, [activeEntity?.kind, activeEntity?.id, activeNote, activeList, hotkeysOpen])
 
   return (
     <div className="h-full flex flex-col md:flex-row">
@@ -403,6 +411,7 @@ export default function App() {
         onClose={() => setPaletteOpen(false)}
         onJump={(e) => setActiveEntity(e)}
       />
+      <HotkeysModal open={hotkeysOpen} onClose={() => setHotkeysOpen(false)} />
       <NoteTemplatePicker
         open={templatePickerOpen}
         folderId={
