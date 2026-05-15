@@ -77,6 +77,8 @@ export const updateNote = (id, data) => api.patch(`/notes/${id}`, data).then(r =
 export const deleteNote = (id) => api.delete(`/notes/${id}`);
 export const duplicateNote = (id) => api.post(`/notes/${id}/duplicate`).then(r => r.data);
 export const getBacklinks = (id) => api.get(`/notes/${id}/backlinks`).then(r => r.data);
+export const getUnlinkedMentions = (id) =>
+  api.get(`/notes/${id}/unlinked_mentions`).then(r => r.data);
 export const resolveNote = (title) =>
   api.get('/notes/resolve', { params: { title } }).then(r => r.data).catch(e => {
     if (e.response?.status === 404) return null;

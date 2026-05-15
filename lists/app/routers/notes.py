@@ -313,6 +313,75 @@ async def add_alias(note_id: int, body: dict):
     return await list_aliases(note_id)
 
 
+@router.get("/{note_id}/unlinked_mentions", response_model=list[BacklinkEntry])
+async def get_unlinked_mentions(note_id: int):
+    """Notes whose body contains this note's title (or any alias) literally
+    but does **not** also wikilink or embed it.
+
+    Mirrors Obsidian's "Unlinked mentions" section under backlinks. Matching
+    is case-insensitive on whole-word boundaries against the title/alias
+    string; existing wikilinks are excluded so the user only sees text that
+    *could* be linked.
+    """
+    conn = get_connection()
+    target = conn.execute("SELECT title FROM notes WHERE id = ?", (note_id,)).fetchone()
+    if not target:
+        raise HTTPException(404, "Note not found")
+
+    titles = {target["title"]}
+    for r in conn.execute(
+        "SELECT alias FROM note_aliases WHERE note_id = ?", (note_id,)
+    ).fetchall():
+        titles.add(r["alias"])
+
+    already = {
+        (row["source_note_id"], (row["target_title"] or "").lower())
+        for row in conn.execute(
+            "SELECT source_note_id, target_title FROM note_links"
+        ).fetchall()
+    }
+
+    out: list[BacklinkEntry] = []
+    seen_source: set[int] = set()
+    for row in conn.execute(
+        "SELECT id, title, body FROM notes WHERE id != ? AND archived = 0",
+        (note_id,),
+    ).fetchall():
+        if row["id"] in seen_source:
+            continue
+        body = row["body"] or ""
+        lowered = body.lower()
+        # Filter out matches that fall inside a wikilink/embed bracketed range.
+        bracket_ranges: list[tuple[int, int]] = []
+        for m in re.finditer(r"!?\[\[([^\]]+)\]\]", body):
+            bracket_ranges.append((m.start(), m.end()))
+        def _in_bracket(idx: int) -> bool:
+            return any(s <= idx < e for s, e in bracket_ranges)
+        for t in titles:
+            if not t:
+                continue
+            pat = re.compile(rf"\b{re.escape(t)}\b", re.IGNORECASE)
+            hits = [m for m in pat.finditer(body) if not _in_bracket(m.start())]
+            if not hits:
+                continue
+            if (row["id"], t.lower()) in already:
+                continue
+            idx = hits[0].start()
+            start = max(0, idx - 60)
+            end = min(len(body), idx + 60)
+            snippet = body[start:end].strip()
+            out.append(BacklinkEntry(
+                note_id=row["id"],
+                title=row["title"],
+                snippet=snippet,
+                link_type="unlinked",
+            ))
+            seen_source.add(row["id"])
+            break
+    out.sort(key=lambda b: b.note_id)
+    return out
+
+
 @router.delete("/{note_id}/aliases/{alias}", status_code=204)
 async def remove_alias(note_id: int, alias: str):
     conn = get_connection()
