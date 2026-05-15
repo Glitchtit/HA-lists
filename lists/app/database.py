@@ -62,7 +62,27 @@ def _migrate(conn: sqlite3.Connection) -> None:
     """Idempotent migrations for existing databases that predate newer features."""
     _migrate_board_nodes(conn)
     _migrate_search_index(conn)
+    _migrate_note_aliases(conn)
     _seed_board_templates(conn)
+
+
+def _migrate_note_aliases(conn: sqlite3.Connection) -> None:
+    """Create the note_aliases table if missing (added in v1.0.9)."""
+    existing = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='note_aliases'"
+    ).fetchone()
+    if existing:
+        return
+    conn.executescript(
+        """
+        CREATE TABLE note_aliases (
+            note_id INTEGER NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+            alias   TEXT    NOT NULL,
+            PRIMARY KEY (note_id, alias)
+        );
+        CREATE INDEX IF NOT EXISTS idx_note_aliases_alias ON note_aliases(alias);
+        """
+    )
 
 
 def _migrate_board_nodes(conn: sqlite3.Connection) -> None:
@@ -339,6 +359,13 @@ CREATE TABLE IF NOT EXISTS note_links (
     UNIQUE(source_note_id, target_title, link_type)
 );
 CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_title);
+
+CREATE TABLE IF NOT EXISTS note_aliases (
+    note_id INTEGER NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+    alias   TEXT    NOT NULL,
+    PRIMARY KEY (note_id, alias)
+);
+CREATE INDEX IF NOT EXISTS idx_note_aliases_alias ON note_aliases(alias);
 
 CREATE TABLE IF NOT EXISTS boards (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,

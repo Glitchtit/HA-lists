@@ -496,6 +496,43 @@ class TestNotes:
         r = client.post("/api/notes/daily", params={"date": "not-a-date"})
         assert r.status_code == 400
 
+    def test_aliases_crud_and_resolve(self, client):
+        nid = client.post("/api/notes/", json={"title": "Canonical"}).json()["id"]
+        # empty list to start
+        assert client.get(f"/api/notes/{nid}/aliases").json() == []
+        # add a couple
+        client.post(f"/api/notes/{nid}/aliases", json={"alias": "alt name"})
+        client.post(f"/api/notes/{nid}/aliases", json={"alias": "Canon"})
+        assert sorted(client.get(f"/api/notes/{nid}/aliases").json()) == ["Canon", "alt name"]
+        # resolve hits aliases (case-insensitive)
+        r = client.get("/api/notes/resolve", params={"title": "ALT NAME"})
+        assert r.status_code == 200
+        assert r.json()["note_id"] == nid
+        # title still wins over alias
+        r2 = client.get("/api/notes/resolve", params={"title": "canonical"})
+        assert r2.json()["note_id"] == nid
+        # delete an alias
+        client.delete(f"/api/notes/{nid}/aliases/alt%20name")
+        assert client.get(f"/api/notes/{nid}/aliases").json() == ["Canon"]
+
+    def test_alias_rejects_collision_with_existing_title(self, client):
+        a = client.post("/api/notes/", json={"title": "Apple"}).json()["id"]
+        client.post("/api/notes/", json={"title": "Banana"})
+        r = client.post(f"/api/notes/{a}/aliases", json={"alias": "Banana"})
+        assert r.status_code == 409
+
+    def test_alias_empty_rejected(self, client):
+        nid = client.post("/api/notes/", json={"title": "X"}).json()["id"]
+        r = client.post(f"/api/notes/{nid}/aliases", json={"alias": "  "})
+        assert r.status_code == 400
+
+    def test_alias_cascade_on_note_delete(self, client, tmp_db):
+        nid = client.post("/api/notes/", json={"title": "Doomed"}).json()["id"]
+        client.post(f"/api/notes/{nid}/aliases", json={"alias": "Goner"})
+        assert tmp_db.execute("SELECT COUNT(*) AS c FROM note_aliases").fetchone()["c"] == 1
+        client.delete(f"/api/notes/{nid}")
+        assert tmp_db.execute("SELECT COUNT(*) AS c FROM note_aliases").fetchone()["c"] == 0
+
 
 class TestWikilinkParser:
     def test_plain(self):
