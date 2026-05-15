@@ -9,6 +9,7 @@ import NoteEditor from './components/notes/NoteEditor'
 import NoteToolbar from './components/notes/NoteToolbar'
 import NotesRightPane from './components/notes/NotesRightPane'
 import NoteGraph from './components/notes/NoteGraph'
+import NoteTemplatePicker from './components/notes/NoteTemplatePicker'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -33,6 +34,7 @@ export default function App() {
   const [recent, setRecent] = useState(() => {
     try { return JSON.parse(localStorage.getItem('lists_recent') || '[]') } catch { return [] }
   })
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
 
   useEffect(() => {
     const onKey = (e) => {
@@ -294,6 +296,7 @@ export default function App() {
         onRefresh={loadTopLevel}
         onOpenDailyNote={openDailyNote}
         onOpenRandomNote={openRandomNote}
+        onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
         recent={recent}
       />
 
@@ -366,6 +369,16 @@ export default function App() {
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         onJump={(e) => setActiveEntity(e)}
+      />
+      <NoteTemplatePicker
+        open={templatePickerOpen}
+        folderId={
+          activeEntity?.kind === 'note' && activeNote ? activeNote.folder_id :
+          activeEntity?.kind === 'list' && activeList ? activeList.folder_id :
+          null
+        }
+        onClose={() => setTemplatePickerOpen(false)}
+        onCreated={async (n) => { await loadTopLevel(); setActiveEntity({ kind: 'note', id: n.id }); }}
       />
       {compileOpen && activeList && (
         <CompileDialog

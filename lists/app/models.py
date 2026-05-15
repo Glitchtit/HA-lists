@@ -240,6 +240,37 @@ class BacklinkEntry(BaseModel):
     link_type: str
 
 
+class NoteTemplate(BaseModel):
+    id: int
+    name: str
+    icon: str
+    title_tpl: str
+    body_md: str
+    category: str
+    is_system: bool
+    sort_order: int
+    created_at: str
+    updated_at: str
+
+
+class NoteTemplateCreate(BaseModel):
+    name: str
+    icon: str = "📝"
+    title_tpl: str = ""
+    body_md: str = ""
+    category: str = "general"
+    sort_order: int = 0
+
+
+class NoteTemplateUpdate(BaseModel):
+    name: str | None = None
+    icon: str | None = None
+    title_tpl: str | None = None
+    body_md: str | None = None
+    category: str | None = None
+    sort_order: int | None = None
+
+
 # ── Boards ────────────────────────────────────────────────────────────────────
 
 

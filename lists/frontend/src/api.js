@@ -99,6 +99,16 @@ export const removeNoteAlias = (noteId, alias) =>
   api.delete(`/notes/${noteId}/aliases/${encodeURIComponent(alias)}`);
 export const getNoteGraph = () => api.get('/notes/graph').then(r => r.data);
 export const getNoteTags = () => api.get('/notes/tags').then(r => r.data);
+export const getNoteTemplates = (params = {}) =>
+  api.get('/note-templates/', { params }).then(r => r.data);
+export const createNoteTemplate = (payload) =>
+  api.post('/note-templates/', payload).then(r => r.data);
+export const updateNoteTemplate = (id, patch) =>
+  api.patch(`/note-templates/${id}`, patch).then(r => r.data);
+export const deleteNoteTemplate = (id) =>
+  api.delete(`/note-templates/${id}`);
+export const applyNoteTemplate = (id, payload) =>
+  api.post(`/note-templates/${id}/apply`, payload || null).then(r => r.data);
 
 // ── AI note actions ────────────────────────────────────────────────────────
 export const aiNoteSummarize    = (noteId) =>

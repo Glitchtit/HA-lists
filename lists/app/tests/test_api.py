@@ -1623,3 +1623,64 @@ class TestBoardTemplates:
         assert r.status_code == 200
         for t in r.json():
             assert t["category"] == "basic"
+
+
+class TestNoteTemplates:
+    def test_seeded_system_templates_present(self, client):
+        names = [t["name"] for t in client.get("/api/note-templates/").json()]
+        for expected in ["Daily journal", "Meeting note", "Bug report", "Project brief"]:
+            assert expected in names
+
+    def test_system_templates_are_read_only(self, client):
+        sys_tpl = next(t for t in client.get("/api/note-templates/").json() if t["is_system"])
+        assert client.patch(f"/api/note-templates/{sys_tpl['id']}", json={"name": "X"}).status_code == 403
+        assert client.delete(f"/api/note-templates/{sys_tpl['id']}").status_code == 403
+
+    def test_user_template_crud(self, client):
+        t = client.post("/api/note-templates/", json={
+            "name": "My note tpl",
+            "body_md": "# {{title}}\n\nbody",
+            "title_tpl": "{{date}} reflections",
+        }).json()
+        assert t["id"]
+        u = client.patch(f"/api/note-templates/{t['id']}", json={"body_md": "# updated"}).json()
+        assert u["body_md"] == "# updated"
+        assert client.delete(f"/api/note-templates/{t['id']}").status_code == 204
+
+    def test_apply_substitutes_variables(self, client):
+        from datetime import datetime
+        sys_tpl = next(
+            t for t in client.get("/api/note-templates/").json()
+            if t["name"] == "Daily journal"
+        )
+        r = client.post(f"/api/note-templates/{sys_tpl['id']}/apply")
+        assert r.status_code == 201
+        note = r.json()
+        today = datetime.now().strftime("%Y-%m-%d")
+        assert note["title"] == today
+        assert today in note["body"]
+        assert note["icon"] == "📅"
+
+    def test_apply_with_override_title_and_folder(self, client):
+        fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        sys_tpl = next(
+            t for t in client.get("/api/note-templates/").json()
+            if t["name"] == "Meeting note"
+        )
+        r = client.post(
+            f"/api/note-templates/{sys_tpl['id']}/apply",
+            json={"folder_id": fid, "title": "Standup"},
+        )
+        note = r.json()
+        assert note["title"] == "Standup"
+        assert note["folder_id"] == fid
+        # Body still gets {{title}} substituted with the resolved title
+        assert "Standup" in note["body"]
+
+    def test_apply_rejects_bad_folder(self, client):
+        sys_tpl = next(t for t in client.get("/api/note-templates/").json())
+        r = client.post(
+            f"/api/note-templates/{sys_tpl['id']}/apply",
+            json={"folder_id": 99999},
+        )
+        assert r.status_code == 400
