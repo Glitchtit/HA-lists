@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import NoteSource from './NoteSource';
 import NotePreview from './NotePreview';
+import WikilinkSuggest, { invalidateNoteCache } from './WikilinkSuggest';
 import * as api from '../../api';
 
 function countStats(body) {
@@ -45,6 +46,10 @@ export default function NoteEditor({
   onExtracted,
 }) {
   const sourceRef = useRef(null);
+  const [linkTrigger, setLinkTrigger] = useState(null);
+
+  // Refresh autocomplete cache when a note saves (title might have changed)
+  useEffect(() => { invalidateNoteCache(); }, [note?.id, note?.title]);
   const [modeState, setModeState] = useState('preview'); // 'split' | 'source' | 'preview'
   const mode = modeProp ?? modeState;
   const setMode = (m) => { if (onModeChange) onModeChange(m); else setModeState(m); };
@@ -165,6 +170,7 @@ export default function NoteEditor({
               value={draftBody}
               onChange={(v) => setDraftBody(v)}
               onBlur={(v) => commitBody(v)}
+              onLinkAutocomplete={setLinkTrigger}
             />
           </div>
         )}
@@ -181,6 +187,18 @@ export default function NoteEditor({
           </div>
         )}
       </div>
+
+      <WikilinkSuggest
+        trigger={linkTrigger}
+        onPick={(n) => {
+          const ref = sourceRef.current;
+          if (ref && linkTrigger) {
+            ref.replaceRange(linkTrigger.from, linkTrigger.to, `[[${n.title}]]`);
+          }
+          setLinkTrigger(null);
+        }}
+        onClose={() => setLinkTrigger(null)}
+      />
 
       <div className="flex items-center justify-end gap-3 border-t border-line-1 bg-surface-1 px-4 py-1 text-xs text-ink-4 font-mono">
         <span title="Word count">{stats.words.toLocaleString()} {stats.words === 1 ? 'word' : 'words'}</span>

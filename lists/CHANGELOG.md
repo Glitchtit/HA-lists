@@ -1,3 +1,7 @@
+## 1.2.8
+
+- **Wikilink autocomplete** — typing `[[` in the editor pops a floating note-title picker beneath the cursor, just like Obsidian. Filter as you type; ArrowUp/Down to navigate, Enter or Tab to insert `[[Title]]` and close the brackets, Esc to dismiss. Notes are cached for 5 seconds to keep keystrokes snappy; cache invalidates when you switch notes or rename one. Trigger only fires inside a `[[…` that hasn't been closed, so existing wikilinks aren't disturbed
+
 ## 1.2.7
 
 - **Custom CSS snippets** — Obsidian's appearance-snippets feature. Click 🎨 in the sidebar header to paste arbitrary CSS that gets injected into a single `<style id="lists-custom-css">` tag in `<head>`. Persists per-browser in `localStorage` (`lists_custom_css`); applied automatically on every load. Use the existing CSS variables and class hooks like `.note-preview`, `.wikilink`, `var(--brand-orange)` to restyle the app without touching code
