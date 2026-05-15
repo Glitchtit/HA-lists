@@ -12,6 +12,7 @@ import NoteGraph from './components/notes/NoteGraph'
 import NoteTemplatePicker from './components/notes/NoteTemplatePicker'
 import TabBar from './components/TabBar'
 import HotkeysModal from './components/HotkeysModal'
+import WorkspacesModal from './components/WorkspacesModal'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -39,6 +40,7 @@ export default function App() {
   const [tabs, setTabs] = useState([]) // [{kind, id}]
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
   const [hotkeysOpen, setHotkeysOpen] = useState(false)
+  const [workspacesOpen, setWorkspacesOpen] = useState(false)
 
   useEffect(() => {
     const onKey = (e) => {
@@ -346,6 +348,7 @@ export default function App() {
         onOpenDailyNote={openDailyNote}
         onOpenRandomNote={openRandomNote}
         onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
+        onOpenWorkspaces={() => setWorkspacesOpen(true)}
         recent={recent}
       />
 
@@ -435,6 +438,16 @@ export default function App() {
         onJump={(e) => setActiveEntity(e)}
       />
       <HotkeysModal open={hotkeysOpen} onClose={() => setHotkeysOpen(false)} />
+      <WorkspacesModal
+        open={workspacesOpen}
+        onClose={() => setWorkspacesOpen(false)}
+        tabs={tabs}
+        activeEntity={activeEntity}
+        onRestore={(w) => {
+          setTabs(w.tabs || [])
+          setActiveEntity(w.activeEntity || null)
+        }}
+      />
       <NoteTemplatePicker
         open={templatePickerOpen}
         folderId={

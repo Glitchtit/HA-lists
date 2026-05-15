@@ -8,7 +8,7 @@ const ICON_CHOICES = ['📁', '📋', '📝', '🛒', '🏠', '💼', '🎯', '�
 const NOTE_ICON_CHOICES = ['📝', '📓', '📒', '📕', '📗', '📘', '📙', '🗒️', '📄', '🧠', '💡', '⭐']
 const BOARD_ICON_CHOICES = ['🧩', '🗺️', '🧠', '🪐', '🧭', '🎛️', '📐', '🗂️', '🔗', '✨', '🌌', '🧱']
 
-export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote, onOpenRandomNote, onOpenTemplatePicker, recent = [] }) {
+export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote, onOpenRandomNote, onOpenTemplatePicker, onOpenWorkspaces, recent = [] }) {
   const [newListName, setNewListName] = useState('')
   const [newFolderName, setNewFolderName] = useState('')
   const [newNoteTitle, setNewNoteTitle] = useState('')
@@ -394,6 +394,16 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
               aria-label="New note from template"
             >
               📋
+            </button>
+          )}
+          {onOpenWorkspaces && (
+            <button
+              onClick={() => onOpenWorkspaces()}
+              className="text-sm text-ink-3 hover:text-ink-1"
+              title="Workspaces (save/restore tab layouts)"
+              aria-label="Workspaces"
+            >
+              💼
             </button>
           )}
           <button

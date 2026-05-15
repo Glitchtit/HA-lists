@@ -1,3 +1,7 @@
+## 1.2.5
+
+- **Workspaces** — Obsidian's saved-layout feature. Click 💼 in the sidebar header to open the workspaces modal: name your current tab strip + active tab and Save; click any saved entry to restore those tabs (including pin state) and re-activate the entity that was focused. Stored per-browser in `localStorage` (`lists_workspaces`); saving the same name overwrites. Useful for "work mode" vs "writing mode" presets
+
 ## 1.2.4
 
 - **Pinned tabs** — right-click a tab to pin (or unpin) it. Pinned tabs render with a 📌 prefix in International Orange, sort to the front of the tab strip, and survive the 12-tab cap when older unpinned tabs would otherwise auto-drop. Mirrors Obsidian's pinned-tab behaviour for "keep this file open while I navigate around"
