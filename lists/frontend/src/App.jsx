@@ -163,10 +163,26 @@ export default function App() {
     }
   }
 
-  async function handleWikilinkClick(title) {
+  async function handleWikilinkClick(title, anchor = '') {
     try {
       const hit = await api.resolveNote(title)
-      if (hit) { setActiveEntity({ kind: 'note', id: hit.note_id }); return }
+      if (hit) {
+        setActiveEntity({ kind: 'note', id: hit.note_id })
+        if (anchor) {
+          // Defer slightly so the new note renders before scrolling.
+          const slug = String(anchor)
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+          setTimeout(() => {
+            const target = document.querySelector(`.note-preview [data-heading-slug="${CSS.escape(slug)}"]`)
+            if (target && target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }, 250)
+        }
+        return
+      }
       if (window.confirm(`Create note "${title}"?`)) {
         const n = await api.createNote({ title, body: '', folder_id: activeNote?.folder_id ?? null })
         await loadTopLevel()

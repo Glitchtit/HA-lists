@@ -113,10 +113,12 @@ export default function NotePreview({
   const components = useMemo(() => ({
     a({ node, href, children, ...props }) {
       const wl = props['data-wikilink'] || node?.properties?.['dataWikilink'];
+      const anchor = props['data-wikilink-anchor'] || node?.properties?.['dataWikilinkAnchor'] || '';
       if (wl) {
         return (
           <Wikilink
             title={wl}
+            anchor={anchor}
             onClick={onWikilinkClick}
             onOpenInBackground={onWikilinkOpenInBackground}
             onResolve={onEmbedResolve}

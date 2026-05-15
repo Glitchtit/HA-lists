@@ -691,6 +691,11 @@ class TestWikilinkParser:
         from routers._wikilinks import extract_wikilinks
         assert extract_wikilinks("see [[Foo]] here") == [("Foo", "wikilink")]
 
+    def test_heading_anchor_stripped(self):
+        from routers._wikilinks import extract_wikilinks
+        assert extract_wikilinks("see [[Foo#Section]] here") == [("Foo", "wikilink")]
+        assert extract_wikilinks("![[Foo#Bar]]") == [("Foo", "embed")]
+
     def test_embed(self):
         from routers._wikilinks import extract_wikilinks
         assert extract_wikilinks("![[Bar]]") == [("Bar", "embed")]
