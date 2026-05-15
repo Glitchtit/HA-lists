@@ -1,3 +1,7 @@
+## 1.2.9
+
+- **Tag autocomplete** — typing `#` followed by a letter in the editor pops a floating tag picker, same UX as the wikilink one. Filtered by substring against every tag your notes already use (with counts); picking inserts `#tag ` at the cursor. Trigger only fires at line start or after whitespace, so existing hashes in words / URLs are left alone
+
 ## 1.2.8
 
 - **Wikilink autocomplete** — typing `[[` in the editor pops a floating note-title picker beneath the cursor, just like Obsidian. Filter as you type; ArrowUp/Down to navigate, Enter or Tab to insert `[[Title]]` and close the brackets, Esc to dismiss. Notes are cached for 5 seconds to keep keystrokes snappy; cache invalidates when you switch notes or rename one. Trigger only fires inside a `[[…` that hasn't been closed, so existing wikilinks aren't disturbed
