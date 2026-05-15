@@ -97,6 +97,7 @@ export default function NotePreview({
   onWikilinkClick,
   onEmbedResolve,
   onToggleChecklist,
+  onBodyChange,
   visitedEmbeds,
   isEmbed = false,
   simplified = false,
@@ -192,7 +193,13 @@ export default function NotePreview({
 
   return (
     <div className={`note-preview ${lightBg ? 'prose-neutral' : 'prose prose-invert'} max-w-none text-ink-1 ${isEmbed ? 'note-preview-embed' : ''}`}>
-      {!isEmbed && <PropertiesPanel props={props} />}
+      {!isEmbed && (
+        <PropertiesPanel
+          props={props}
+          body={body || ''}
+          onBodyChange={onBodyChange}
+        />
+      )}
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
