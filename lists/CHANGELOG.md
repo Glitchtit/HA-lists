@@ -1,3 +1,7 @@
+## 1.3.0
+
+- **Open wikilink in background tab** — Ctrl/Cmd-click any `[[wikilink]]` in the preview to open the target in a new tab *without* navigating away from your current note. Mirrors Obsidian's "Open in new tab" gesture. Toast confirms the new tab opens; existing pin/cap behaviour applies
+
 ## 1.2.9
 
 - **Tag autocomplete** — typing `#` followed by a letter in the editor pops a floating tag picker, same UX as the wikilink one. Filtered by substring against every tag your notes already use (with counts); picking inserts `#tag ` at the cursor. Trigger only fires at line start or after whitespace, so existing hashes in words / URLs are left alone

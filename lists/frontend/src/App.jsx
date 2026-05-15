@@ -175,6 +175,23 @@ export default function App() {
     }
   }
 
+  async function handleWikilinkOpenInBackground(title) {
+    try {
+      const hit = await api.resolveNote(title)
+      if (!hit) return
+      setTabs((prev) => {
+        if (prev.some((t) => t.kind === 'note' && t.id === hit.note_id)) return prev
+        const next = [...prev, { kind: 'note', id: hit.note_id, pinned: false }]
+        if (next.length <= 12) return next
+        const drop = next.findIndex((t) => !t.pinned)
+        return drop < 0 ? next : [...next.slice(0, drop), ...next.slice(drop + 1)]
+      })
+      flashToast(`Opened "${title}" in a new tab`)
+    } catch (e) {
+      setError(e.message || 'Wikilink resolve failed')
+    }
+  }
+
   const handleEmbedFetch = useCallback(async (title) => {
     try {
       const hit = await api.resolveNote(title)
@@ -395,6 +412,7 @@ export default function App() {
               onModeChange={setEditorMode}
               onChange={handleNoteChange}
               onWikilinkClick={handleWikilinkClick}
+              onWikilinkOpenInBackground={handleWikilinkOpenInBackground}
               onEmbedFetch={handleEmbedFetch}
               onExtracted={() => { loadTopLevel(); flashToast('Extracted to new note') }}
             />

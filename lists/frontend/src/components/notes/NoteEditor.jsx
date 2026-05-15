@@ -41,6 +41,7 @@ export default function NoteEditor({
   note,
   onChange,
   onWikilinkClick,
+  onWikilinkOpenInBackground,
   onEmbedFetch,
   mode: modeProp,
   onModeChange,
@@ -182,6 +183,7 @@ export default function NoteEditor({
             <NotePreview
               body={draftBody}
               onWikilinkClick={onWikilinkClick}
+              onWikilinkOpenInBackground={onWikilinkOpenInBackground}
               onEmbedResolve={onEmbedFetch}
               onToggleChecklist={handleToggleChecklist}
               onBodyChange={(next) => { setDraftBody(next); commitBody(next); }}
