@@ -1,3 +1,7 @@
+## 1.3.7
+
+- **Heading folding in source editor** — wired CodeMirror's `foldGutter` + `foldKeymap` so the editor now shows a fold gutter on the left. Click the chevron next to any heading (or fenced code block) to collapse the section underneath. `Ctrl+Shift+[` and `Ctrl+Shift+]` collapse / expand the current section. Helpful for long notes with deep outlines
+
 ## 1.3.6
 
 - **Tag rename (bulk)** — Obsidian's "Rename tag" command. Hover any row in the Tags pane and click ✏️ to rename it; backend rewrites every inline `#oldtag` and every frontmatter `tags:` entry (flow or block-list form) across all non-archived notes in one transaction. Fenced code blocks are left alone so `#old` inside `\`\`\`` survives. New tag is validated (letters, digits, `_`, `-`, `/`); `note_links` resync runs automatically so the pane refreshes immediately
