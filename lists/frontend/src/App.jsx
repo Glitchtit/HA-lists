@@ -8,6 +8,7 @@ import ConfirmDialog from './components/ConfirmDialog'
 import NoteEditor from './components/notes/NoteEditor'
 import NoteToolbar from './components/notes/NoteToolbar'
 import NotesRightPane from './components/notes/NotesRightPane'
+import NoteGraph from './components/notes/NoteGraph'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -101,12 +102,14 @@ export default function App() {
       setActiveItemId(null)
       loadNote(activeEntity.id)
     }
-    setRecent((prev) => {
-      const filtered = prev.filter((e) => !(e.kind === activeEntity.kind && e.id === activeEntity.id))
-      const next = [{ kind: activeEntity.kind, id: activeEntity.id, ts: Date.now() }, ...filtered].slice(0, 10)
-      try { localStorage.setItem('lists_recent', JSON.stringify(next)) } catch {}
-      return next
-    })
+    if (['list', 'note', 'board'].includes(activeEntity.kind)) {
+      setRecent((prev) => {
+        const filtered = prev.filter((e) => !(e.kind === activeEntity.kind && e.id === activeEntity.id))
+        const next = [{ kind: activeEntity.kind, id: activeEntity.id, ts: Date.now() }, ...filtered].slice(0, 10)
+        try { localStorage.setItem('lists_recent', JSON.stringify(next)) } catch {}
+        return next
+      })
+    }
   }, [activeEntity?.kind, activeEntity?.id])
 
   const activeList = activeEntity?.kind === 'list' ? (lists.find(l => l.id === activeEntity.id) || null) : null
@@ -294,7 +297,16 @@ export default function App() {
         recent={recent}
       />
 
-      {activeEntity?.kind === 'board' ? (
+      {activeEntity?.kind === 'graph' ? (
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="border-b border-line-1 bg-surface-1 px-4 py-2 text-sm text-ink-2">
+            🕸️ Note graph
+          </div>
+          <div className="flex-1 min-h-0">
+            <NoteGraph onSelect={(e) => setActiveEntity(e)} />
+          </div>
+        </div>
+      ) : activeEntity?.kind === 'board' ? (
         <div className="flex-1 min-w-0 flex flex-col">
           <BoardView boardId={activeEntity.id} onOpenEntity={(e) => setActiveEntity(e)} />
         </div>
@@ -326,7 +338,7 @@ export default function App() {
         />
       )}
 
-      {activeEntity?.kind === 'board' ? null : activeEntity?.kind === 'note' ? (
+      {activeEntity?.kind === 'board' || activeEntity?.kind === 'graph' ? null : activeEntity?.kind === 'note' ? (
         <NotesRightPane
           note={activeNote}
           onSelect={(id) => setActiveEntity({ kind: 'note', id })}

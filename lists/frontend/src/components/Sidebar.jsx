@@ -354,6 +354,14 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
             </button>
           )}
           <button
+            onClick={() => onSelect && onSelect({ kind: 'graph' })}
+            className={`text-sm hover:text-ink-1 ${activeEntity?.kind === 'graph' ? 'text-brand-cobalt-300' : 'text-ink-3'}`}
+            title="Note graph"
+            aria-label="Open note graph"
+          >
+            🕸️
+          </button>
+          <button
             onClick={() => setAdding('folder')}
             className="text-sm text-ink-3 hover:text-ink-1"
             title="New folder"
