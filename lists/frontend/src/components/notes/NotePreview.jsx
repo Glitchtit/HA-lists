@@ -13,6 +13,7 @@ import remarkEmbed from './remarkEmbed';
 import remarkCallout from './remarkCallout';
 import MermaidBlock from './MermaidBlock';
 import PropertiesPanel from './PropertiesPanel';
+import Wikilink from './Wikilink';
 import { parseFrontmatter } from './frontmatter';
 
 function slugify(text) {
@@ -112,24 +113,13 @@ export default function NotePreview({
       const wl = props['data-wikilink'] || node?.properties?.['dataWikilink'];
       if (wl) {
         return (
-          <span
-            className="wikilink"
-            role="button"
-            tabIndex={0}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onWikilinkClick && onWikilinkClick(wl);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onWikilinkClick && onWikilinkClick(wl);
-              }
-            }}
+          <Wikilink
+            title={wl}
+            onClick={onWikilinkClick}
+            onResolve={onEmbedResolve}
           >
             {children}
-          </span>
+          </Wikilink>
         );
       }
       return (
