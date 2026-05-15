@@ -137,6 +137,49 @@ async def get_or_create_daily_note(date: str | None = None, folder_id: int | Non
     return await get_note(note_id)
 
 
+@router.get("/graph")
+async def get_note_graph():
+    """Return the full note-link graph for visualization.
+
+    Nodes are non-archived notes; edges are wikilink/embed references that
+    resolve (case-insensitively, by title or alias) to another note.
+    Self-loops and dangling links to unknown titles are dropped, so the
+    payload is renderable as-is by a force-directed graph.
+    """
+    conn = get_connection()
+    note_rows = conn.execute(
+        "SELECT id, title, icon FROM notes WHERE archived = 0 ORDER BY id ASC"
+    ).fetchall()
+    by_title: dict[str, int] = {}
+    nodes: list[dict] = []
+    for r in note_rows:
+        nid = r["id"]
+        title = r["title"] or ""
+        nodes.append({"id": nid, "title": title, "icon": r["icon"] or "📄"})
+        by_title.setdefault(title.lower(), nid)
+
+    for arow in conn.execute("SELECT note_id, alias FROM note_aliases").fetchall():
+        by_title.setdefault((arow["alias"] or "").lower(), arow["note_id"])
+
+    edges: list[dict] = []
+    seen: set[tuple[int, int, str]] = set()
+    for row in conn.execute(
+        "SELECT source_note_id, target_title, link_type FROM note_links"
+    ).fetchall():
+        src = row["source_note_id"]
+        target = (row["target_title"] or "").lower()
+        tgt = by_title.get(target)
+        if tgt is None or tgt == src:
+            continue
+        key = (src, tgt, row["link_type"])
+        if key in seen:
+            continue
+        seen.add(key)
+        edges.append({"source": src, "target": tgt, "link_type": row["link_type"]})
+
+    return {"nodes": nodes, "edges": edges}
+
+
 @router.get("/resolve")
 async def resolve_note(title: str):
     """Case-insensitive title-or-alias lookup; returns ``{"note_id": …}`` or 404.

@@ -1,3 +1,7 @@
+## 1.1.2
+
+- **Graph view** — Obsidian's signature feature. Click 🕸️ in the sidebar header to open a force-directed graph of every non-archived note, with edges drawn for resolved wikilinks (cobalt) and embeds (orange). Node radius scales with link degree, hover dims unrelated edges, click jumps into that note. Backend serves the graph via `GET /api/notes/graph`; aliases resolve as edges to the canonical note, dangling links and self-loops are dropped. Layout runs entirely in the browser — no extra dependencies, no service worker
+
 ## 1.1.1
 
 - **Hover preview for wikilinks** — hovering a `[[wikilink]]` in the preview now opens a small popup with the linked note's icon, title, and the first ~700 chars of its body, just like Obsidian. 350 ms hover delay debounces accidental triggers; popup flips up if it would clip below the viewport; "not found" state shown when the target doesn't resolve

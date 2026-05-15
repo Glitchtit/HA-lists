@@ -533,6 +533,26 @@ class TestNotes:
         client.delete(f"/api/notes/{nid}")
         assert tmp_db.execute("SELECT COUNT(*) AS c FROM note_aliases").fetchone()["c"] == 0
 
+    def test_graph_returns_resolved_edges(self, client):
+        a = client.post("/api/notes/", json={"title": "A", "body": "see [[B]] and [[Ghost]]"}).json()["id"]
+        b = client.post("/api/notes/", json={"title": "B", "body": "embeds ![[C]]"}).json()["id"]
+        c = client.post("/api/notes/", json={"title": "C", "body": "plain"}).json()["id"]
+        r = client.get("/api/notes/graph")
+        assert r.status_code == 200
+        data = r.json()
+        node_ids = {n["id"] for n in data["nodes"]}
+        assert node_ids == {a, b, c}
+        # Edges only for resolvable targets, no self-loops, dedup'd
+        edges = sorted((e["source"], e["target"]) for e in data["edges"])
+        assert edges == sorted([(a, b), (b, c)])
+
+    def test_graph_resolves_alias_edges(self, client):
+        a = client.post("/api/notes/", json={"title": "A", "body": "see [[Beeline]]"}).json()["id"]
+        b = client.post("/api/notes/", json={"title": "Bee"}).json()["id"]
+        client.post(f"/api/notes/{b}/aliases", json={"alias": "Beeline"})
+        edges = client.get("/api/notes/graph").json()["edges"]
+        assert any(e["source"] == a and e["target"] == b for e in edges)
+
 
 class TestWikilinkParser:
     def test_plain(self):

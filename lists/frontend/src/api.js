@@ -95,6 +95,7 @@ export const addNoteAlias = (noteId, alias) =>
   api.post(`/notes/${noteId}/aliases`, { alias }).then(r => r.data);
 export const removeNoteAlias = (noteId, alias) =>
   api.delete(`/notes/${noteId}/aliases/${encodeURIComponent(alias)}`);
+export const getNoteGraph = () => api.get('/notes/graph').then(r => r.data);
 
 // ── AI note actions ────────────────────────────────────────────────────────
 export const aiNoteSummarize    = (noteId) =>
