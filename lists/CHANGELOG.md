@@ -1,3 +1,7 @@
+## 1.1.4
+
+- **Folder notes** — pin one note as a folder's "index" page, just like the Obsidian Folder Notes community plugin. Right-click a folder → **Set folder note** to pick any note inside it; the folder header then becomes a clickable dotted-underline link that opens that note. Right-click again to change or clear. Backend: `folders.folder_note_id` (nullable FK with `ON DELETE SET NULL`) + idempotent migration for existing DBs; PATCH validates the referenced note exists
+
 ## 1.1.3
 
 - **Tags pane** — Obsidian-style tag aggregation. Right-pane now has a Tags tab that lists every `#tag` used across notes (count desc, then alphabetical). Picks up tags from inline body hashtags **and** frontmatter `tags:` (both flow `[a, b]` and block-list forms). Skips fenced code blocks so `# python` shebangs don't yield bogus tags. Click a tag to expand the notes that contain it; click a note to jump there. Served by new `GET /api/notes/tags`

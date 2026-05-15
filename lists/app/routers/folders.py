@@ -52,9 +52,14 @@ async def update_folder(folder_id: int, body: FolderUpdate):
     conn = get_connection()
     if not conn.execute("SELECT 1 FROM folders WHERE id = ?", (folder_id,)).fetchone():
         raise HTTPException(404, "Folder not found")
+    raw = body.model_dump(exclude_unset=True)
+    if "folder_note_id" in raw and raw["folder_note_id"] is not None:
+        nid = raw["folder_note_id"]
+        if not conn.execute("SELECT 1 FROM notes WHERE id = ?", (nid,)).fetchone():
+            raise HTTPException(400, "folder_note_id does not exist")
     updates = {
         k: (1 if v else 0) if k == "archived" else v
-        for k, v in body.model_dump(exclude_unset=True).items()
+        for k, v in raw.items()
     }
     apply_update(conn, "folders", folder_id, updates)
     return await get_folder(folder_id)
