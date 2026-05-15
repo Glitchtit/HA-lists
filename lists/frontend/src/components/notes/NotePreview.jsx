@@ -95,6 +95,7 @@ function Embed({ title, onEmbedResolve, onWikilinkClick, onToggleChecklist, visi
 export default function NotePreview({
   body,
   onWikilinkClick,
+  onWikilinkOpenInBackground,
   onEmbedResolve,
   onToggleChecklist,
   onBodyChange,
@@ -117,6 +118,7 @@ export default function NotePreview({
           <Wikilink
             title={wl}
             onClick={onWikilinkClick}
+            onOpenInBackground={onWikilinkOpenInBackground}
             onResolve={onEmbedResolve}
           >
             {children}
@@ -187,7 +189,7 @@ export default function NotePreview({
     h4: makeHeading('h4'),
     h5: makeHeading('h5'),
     h6: makeHeading('h6'),
-  }), [onWikilinkClick, onEmbedResolve, onToggleChecklist, visitedEmbeds]);
+  }), [onWikilinkClick, onWikilinkOpenInBackground, onEmbedResolve, onToggleChecklist, visitedEmbeds]);
 
   const { props, body: cleanBody } = useMemo(() => parseFrontmatter(body || ''), [body]);
 

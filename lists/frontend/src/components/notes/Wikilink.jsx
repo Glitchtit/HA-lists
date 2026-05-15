@@ -4,7 +4,7 @@ const HOVER_DELAY_MS = 350;
 const POPUP_WIDTH = 360;
 const POPUP_MAX_HEIGHT = 320;
 
-export default function Wikilink({ title, onClick, onResolve, children }) {
+export default function Wikilink({ title, onClick, onResolve, onOpenInBackground, children }) {
   const [hovered, setHovered] = useState(false);
   const [note, setNote] = useState(null);
   const [pos, setPos] = useState(null);
@@ -61,11 +61,20 @@ export default function Wikilink({ title, onClick, onResolve, children }) {
         className="wikilink"
         role="button"
         tabIndex={0}
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClick && onClick(title); }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if ((e.ctrlKey || e.metaKey) && onOpenInBackground) {
+            onOpenInBackground(title);
+            return;
+          }
+          onClick && onClick(title);
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            onClick && onClick(title);
+            if ((e.ctrlKey || e.metaKey) && onOpenInBackground) onOpenInBackground(title);
+            else onClick && onClick(title);
           }
         }}
         onMouseEnter={startHover}
