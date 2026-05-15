@@ -313,6 +313,47 @@ async def add_alias(note_id: int, body: dict):
     return await list_aliases(note_id)
 
 
+@router.get("/{note_id}/outgoing")
+async def get_outgoing_links(note_id: int):
+    """List wikilinks/embeds **from** this note.
+
+    Each entry resolves ``target_title`` to a note id via title-or-alias
+    lookup; unresolved targets are returned with ``note_id: None`` so the
+    UI can offer to create the missing note.
+    """
+    conn = get_connection()
+    if not conn.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,)).fetchone():
+        raise HTTPException(404, "Note not found")
+    rows = conn.execute(
+        "SELECT target_title, link_type FROM note_links WHERE source_note_id = ?"
+        " ORDER BY link_type, target_title",
+        (note_id,),
+    ).fetchall()
+    out = []
+    for r in rows:
+        title = r["target_title"]
+        match = conn.execute(
+            "SELECT id, title, icon FROM notes WHERE LOWER(title) = LOWER(?) LIMIT 1",
+            (title,),
+        ).fetchone()
+        if not match:
+            alias = conn.execute(
+                """SELECT n.id, n.title, n.icon FROM note_aliases a
+                     JOIN notes n ON n.id = a.note_id
+                    WHERE LOWER(a.alias) = LOWER(?) LIMIT 1""",
+                (title,),
+            ).fetchone()
+            match = alias
+        out.append({
+            "target_title": title,
+            "link_type": r["link_type"],
+            "note_id": match["id"] if match else None,
+            "resolved_title": match["title"] if match else None,
+            "resolved_icon": match["icon"] if match else None,
+        })
+    return out
+
+
 @router.get("/{note_id}/unlinked_mentions", response_model=list[BacklinkEntry])
 async def get_unlinked_mentions(note_id: int):
     """Notes whose body contains this note's title (or any alias) literally

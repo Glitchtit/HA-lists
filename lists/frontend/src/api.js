@@ -79,6 +79,8 @@ export const duplicateNote = (id) => api.post(`/notes/${id}/duplicate`).then(r =
 export const getBacklinks = (id) => api.get(`/notes/${id}/backlinks`).then(r => r.data);
 export const getUnlinkedMentions = (id) =>
   api.get(`/notes/${id}/unlinked_mentions`).then(r => r.data);
+export const getOutgoingLinks = (id) =>
+  api.get(`/notes/${id}/outgoing`).then(r => r.data);
 export const resolveNote = (title) =>
   api.get('/notes/resolve', { params: { title } }).then(r => r.data).catch(e => {
     if (e.response?.status === 404) return null;

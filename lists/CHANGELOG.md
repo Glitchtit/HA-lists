@@ -1,3 +1,8 @@
+## 1.1.8
+
+- **Outgoing links pane** — symmetric counterpart to backlinks. The right pane now has an "Outgoing" tab listing every wikilink / embed in the current note, with each target resolved to its note (via title-or-alias lookup) and a clear "unresolved" badge for dangling links. Embeds are tinted orange to match the graph view's edge colours. Backed by new `GET /api/notes/{id}/outgoing`
+- Fix Tags pane navigation — clicking a note inside a tag bucket now jumps to it (was previously broken due to a payload shape mismatch with the parent's onSelect handler)
+
 ## 1.1.7
 
 - **Note templates** — Obsidian-style template library for new notes (separate from the board templates added in 0.9.4). Six seeded system templates: Daily journal, Meeting note, Book review, Project brief, Bug report, Cornell notes. Click 📋 in the sidebar header to open the picker; selecting a template creates a note in the same folder you're working in, with `{{date}}`, `{{time}}`, `{{title}}`, `{{datetime}}`, and parameterised `{{date:%Y-%m}}`-style variables substituted. CRUD endpoints under `/api/note-templates/` let you save your own templates; system templates are read-only
