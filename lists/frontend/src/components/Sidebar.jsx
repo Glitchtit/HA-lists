@@ -167,6 +167,30 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
         label: ic, onClick: async () => { await api.updateFolder(menuFolder.id, { icon: ic }); onRefresh() },
       })),
     },
+    {
+      label: menuFolder.folder_note_id ? 'Change folder note' : 'Set folder note', icon: '📄',
+      children: (() => {
+        const opts = []
+        if (menuFolder.folder_note_id) {
+          opts.push({
+            label: '✕ Clear folder note',
+            onClick: async () => { await api.updateFolder(menuFolder.id, { folder_note_id: null }); onRefresh() },
+          })
+          opts.push({ separator: true })
+        }
+        const candidates = notes.filter((n) => !n.archived && n.folder_id === menuFolder.id)
+        if (candidates.length === 0) {
+          opts.push({ label: '— No notes in this folder —', disabled: true })
+        } else {
+          candidates.forEach((n) => opts.push({
+            label: `${n.icon || '📄'} ${n.title || 'Untitled'}`,
+            disabled: n.id === menuFolder.folder_note_id,
+            onClick: async () => { await api.updateFolder(menuFolder.id, { folder_note_id: n.id }); onRefresh() },
+          }))
+        }
+        return opts
+      })(),
+    },
     { label: 'Duplicate', icon: '📑', hint: 'Ctrl+D', onClick: async () => { await api.duplicateFolder(menuFolder.id); onRefresh() } },
     {
       label: menuFolder.archived ? 'Unarchive' : 'Archive', icon: '🗄️',
@@ -608,14 +632,25 @@ function FolderSection({
       >
         <span className="flex items-center gap-1 flex-1 min-w-0">
           <span>{folder.icon || '📁'}</span>
-          <InlineEditLabel
-            value={folder.name}
-            editing={isEditing}
-            onCommit={async (name) => { await api.updateFolder(folder.id, { name }); setEditing(null); onRefresh() }}
-            onCancel={() => setEditing(null)}
-            className="truncate"
-            inputClassName="flex-1 min-w-0 px-1 py-0 bg-surface-3 text-ink-1 border border-brand-cobalt rounded outline-none text-sm"
-          />
+          {folder.folder_note_id && !isEditing ? (
+            <button
+              type="button"
+              onClick={() => onSelect && onSelect({ kind: 'note', id: folder.folder_note_id })}
+              className="truncate text-left text-ink-2 hover:text-ink-1 underline decoration-dotted decoration-ink-4 underline-offset-2"
+              title="Open folder note"
+            >
+              {folder.name}
+            </button>
+          ) : (
+            <InlineEditLabel
+              value={folder.name}
+              editing={isEditing}
+              onCommit={async (name) => { await api.updateFolder(folder.id, { name }); setEditing(null); onRefresh() }}
+              onCancel={() => setEditing(null)}
+              className="truncate"
+              inputClassName="flex-1 min-w-0 px-1 py-0 bg-surface-3 text-ink-1 border border-brand-cobalt rounded outline-none text-sm"
+            />
+          )}
         </span>
         <div className="flex items-center gap-1">
           <button

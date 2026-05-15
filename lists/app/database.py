@@ -63,7 +63,19 @@ def _migrate(conn: sqlite3.Connection) -> None:
     _migrate_board_nodes(conn)
     _migrate_search_index(conn)
     _migrate_note_aliases(conn)
+    _migrate_folder_note_id(conn)
     _seed_board_templates(conn)
+
+
+def _migrate_folder_note_id(conn: sqlite3.Connection) -> None:
+    """Add folders.folder_note_id (added in v1.1.4)."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(folders)").fetchall()}
+    if "folder_note_id" in cols:
+        return
+    conn.execute(
+        "ALTER TABLE folders ADD COLUMN folder_note_id INTEGER "
+        "REFERENCES notes(id) ON DELETE SET NULL"
+    )
 
 
 def _migrate_note_aliases(conn: sqlite3.Connection) -> None:
@@ -252,14 +264,15 @@ def _migrate_search_index(conn: sqlite3.Connection) -> None:
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS folders (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    name        TEXT    NOT NULL,
-    icon        TEXT    DEFAULT '📁',
-    color       TEXT    DEFAULT '',
-    sort_order  INTEGER DEFAULT 0,
-    archived    INTEGER DEFAULT 0,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT    NOT NULL,
+    icon            TEXT    DEFAULT '📁',
+    color           TEXT    DEFAULT '',
+    sort_order      INTEGER DEFAULT 0,
+    archived        INTEGER DEFAULT 0,
+    folder_note_id  INTEGER REFERENCES notes(id) ON DELETE SET NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS lists (

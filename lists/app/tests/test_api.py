@@ -387,6 +387,29 @@ class TestMoveValidation:
         r = client.patch(f"/api/lists/{list_id}", json={"folder_id": 9999})
         assert r.status_code == 400
 
+    def test_folder_note_assignment(self, client):
+        fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        nid = client.post("/api/notes/", json={"title": "Index"}).json()["id"]
+        r = client.patch(f"/api/folders/{fid}", json={"folder_note_id": nid})
+        assert r.status_code == 200
+        assert r.json()["folder_note_id"] == nid
+        # clear it
+        r2 = client.patch(f"/api/folders/{fid}", json={"folder_note_id": None})
+        assert r2.json()["folder_note_id"] is None
+
+    def test_folder_note_rejects_missing_note(self, client):
+        fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        r = client.patch(f"/api/folders/{fid}", json={"folder_note_id": 99999})
+        assert r.status_code == 400
+
+    def test_folder_note_clears_on_note_delete(self, client):
+        fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
+        nid = client.post("/api/notes/", json={"title": "Index"}).json()["id"]
+        client.patch(f"/api/folders/{fid}", json={"folder_note_id": nid})
+        client.delete(f"/api/notes/{nid}")
+        r = client.get(f"/api/folders/{fid}")
+        assert r.json()["folder_note_id"] is None
+
 
 class TestNotes:
     def test_create_with_defaults(self, client):

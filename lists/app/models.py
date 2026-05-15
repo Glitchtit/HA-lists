@@ -31,6 +31,7 @@ class FolderUpdate(BaseModel):
     color: str | None = None
     sort_order: int | None = None
     archived: bool | None = None
+    folder_note_id: int | None = None
 
 
 class Folder(BaseModel):
@@ -40,6 +41,7 @@ class Folder(BaseModel):
     color: str
     sort_order: int
     archived: bool
+    folder_note_id: int | None = None
     created_at: str
     updated_at: str
 
