@@ -6,11 +6,13 @@ import { markdown } from '@codemirror/lang-markdown';
 import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { oneDark } from '@codemirror/theme-one-dark';
 
-const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onLinkAutocomplete, className = '' }, ref) {
+const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onLinkAutocomplete, onTagAutocomplete, className = '' }, ref) {
   const hostRef = useRef(null);
   const viewRef = useRef(null);
   const onLinkAutocompleteRef = useRef(onLinkAutocomplete);
   useEffect(() => { onLinkAutocompleteRef.current = onLinkAutocomplete; }, [onLinkAutocomplete]);
+  const onTagAutocompleteRef = useRef(onTagAutocomplete);
+  useEffect(() => { onTagAutocompleteRef.current = onTagAutocomplete; }, [onTagAutocomplete]);
 
   useImperativeHandle(ref, () => ({
     getSelection() {
@@ -56,34 +58,53 @@ const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onL
       if (upd.docChanged && onChangeRef.current) {
         onChangeRef.current(upd.state.doc.toString());
       }
-      if ((upd.docChanged || upd.selectionSet) && onLinkAutocompleteRef.current) {
+      if (upd.docChanged || upd.selectionSet) {
         const view = upd.view;
         const pos = view.state.selection.main.head;
         const lineStart = view.state.doc.lineAt(pos).from;
         const before = view.state.doc.sliceString(lineStart, pos);
-        // Find the last [[ on this line that hasn't been closed
-        const open = before.lastIndexOf('[[');
-        if (open === -1) {
-          onLinkAutocompleteRef.current(null);
-          return;
+        let handled = false;
+        // Wikilink trigger: open [[ unclosed
+        if (onLinkAutocompleteRef.current) {
+          const open = before.lastIndexOf('[[');
+          if (open !== -1) {
+            const between = before.slice(open + 2);
+            if (!/[\]\n]/.test(between)) {
+              const coords = view.coordsAtPos(pos);
+              if (coords) {
+                onLinkAutocompleteRef.current({
+                  query: between,
+                  x: coords.left,
+                  y: coords.bottom + 4,
+                  from: lineStart + open,
+                  to: pos,
+                });
+                handled = true;
+              }
+            }
+          }
+          if (!handled) onLinkAutocompleteRef.current(null);
         }
-        const between = before.slice(open + 2);
-        if (/[\]\n]/.test(between)) {
-          onLinkAutocompleteRef.current(null);
-          return;
+        // Tag trigger: #word at start or after whitespace, not inside [[…
+        if (!handled && onTagAutocompleteRef.current) {
+          const hashMatch = /(^|\s)#([A-Za-z0-9][\w/-]*)$/.exec(before);
+          if (hashMatch) {
+            const offsetInBefore = hashMatch.index + (hashMatch[1] ? 1 : 0);
+            const from = lineStart + offsetInBefore;
+            const coords = view.coordsAtPos(pos);
+            if (coords) {
+              onTagAutocompleteRef.current({
+                query: hashMatch[2],
+                x: coords.left,
+                y: coords.bottom + 4,
+                from,
+                to: pos,
+              });
+              return;
+            }
+          }
+          onTagAutocompleteRef.current(null);
         }
-        const coords = view.coordsAtPos(pos);
-        if (!coords) {
-          onLinkAutocompleteRef.current(null);
-          return;
-        }
-        onLinkAutocompleteRef.current({
-          query: between,
-          x: coords.left,
-          y: coords.bottom + 4,
-          from: lineStart + open,
-          to: pos,
-        });
       }
     });
 

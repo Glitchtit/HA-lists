@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import NoteSource from './NoteSource';
 import NotePreview from './NotePreview';
 import WikilinkSuggest, { invalidateNoteCache } from './WikilinkSuggest';
+import TagSuggest, { invalidateTagCache } from './TagSuggest';
 import * as api from '../../api';
 
 function countStats(body) {
@@ -47,9 +48,10 @@ export default function NoteEditor({
 }) {
   const sourceRef = useRef(null);
   const [linkTrigger, setLinkTrigger] = useState(null);
+  const [tagTrigger, setTagTrigger] = useState(null);
 
-  // Refresh autocomplete cache when a note saves (title might have changed)
-  useEffect(() => { invalidateNoteCache(); }, [note?.id, note?.title]);
+  // Refresh autocomplete caches when a note saves (title might have changed)
+  useEffect(() => { invalidateNoteCache(); invalidateTagCache(); }, [note?.id, note?.title]);
   const [modeState, setModeState] = useState('preview'); // 'split' | 'source' | 'preview'
   const mode = modeProp ?? modeState;
   const setMode = (m) => { if (onModeChange) onModeChange(m); else setModeState(m); };
@@ -171,6 +173,7 @@ export default function NoteEditor({
               onChange={(v) => setDraftBody(v)}
               onBlur={(v) => commitBody(v)}
               onLinkAutocomplete={setLinkTrigger}
+              onTagAutocomplete={setTagTrigger}
             />
           </div>
         )}
@@ -198,6 +201,17 @@ export default function NoteEditor({
           setLinkTrigger(null);
         }}
         onClose={() => setLinkTrigger(null)}
+      />
+      <TagSuggest
+        trigger={tagTrigger}
+        onPick={(t) => {
+          const ref = sourceRef.current;
+          if (ref && tagTrigger) {
+            ref.replaceRange(tagTrigger.from, tagTrigger.to, `#${t.tag} `);
+          }
+          setTagTrigger(null);
+        }}
+        onClose={() => setTagTrigger(null)}
       />
 
       <div className="flex items-center justify-end gap-3 border-t border-line-1 bg-surface-1 px-4 py-1 text-xs text-ink-4 font-mono">
