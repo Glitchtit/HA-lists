@@ -3,6 +3,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
+import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { oneDark } from '@codemirror/theme-one-dark';
 
 export default function NoteSource({ value, onChange, onBlur, className = '' }) {
@@ -36,7 +37,9 @@ export default function NoteSource({ value, onChange, onBlur, className = '' }) 
       doc: value || '',
       extensions: [
         history(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        search({ top: true }),
+        highlightSelectionMatches(),
+        keymap.of([...searchKeymap, ...defaultKeymap, ...historyKeymap]),
         markdown(),
         oneDark,
         EditorView.lineWrapping,

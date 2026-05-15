@@ -294,6 +294,18 @@ export default function App() {
         if (inEditable) return
         e.preventDefault()
         openDailyNote()
+      } else if (ctrl && !e.shiftKey && !e.altKey && (e.key === 'f' || e.key === 'F')) {
+        // Ctrl+F: switch to split mode (if needed) so CodeMirror's own
+        // search panel (registered via @codemirror/search) can take over.
+        if (activeEntity?.kind === 'note' && editorMode === 'preview') {
+          setEditorMode('split')
+          requestAnimationFrame(() => {
+            const cm = document.querySelector('.cm-editor .cm-content')
+            if (cm) cm.focus()
+          })
+          // Don't prevent default — let the browser pass Ctrl+F on the next
+          // tick so the CodeMirror keymap catches it.
+        }
       } else if (e.key === '?' && !ctrl && !e.altKey) {
         if (inEditable) return
         e.preventDefault()
@@ -308,7 +320,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [activeEntity?.kind, activeEntity?.id, activeNote, activeList, hotkeysOpen])
+  }, [activeEntity?.kind, activeEntity?.id, activeNote, activeList, hotkeysOpen, editorMode])
 
   return (
     <div className="h-full flex flex-col md:flex-row">

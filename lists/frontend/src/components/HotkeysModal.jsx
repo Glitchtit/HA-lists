@@ -11,6 +11,8 @@ const SHORTCUTS = [
     { keys: ['F2'], desc: 'Rename selected folder / list / note / board' },
     { keys: ['Del'], desc: 'Delete selected entity (with confirm)' },
     { keys: ['Ctrl', 'D'], desc: 'Duplicate folder / list / item' },
+    { keys: ['Ctrl', 'F'], desc: 'Find in note (opens CodeMirror search panel)' },
+    { keys: ['Ctrl', 'G'], desc: 'Jump to next find match' },
   ]},
   { group: 'Boards (canvas)', items: [
     { keys: ['t'], desc: 'Open template picker at cursor' },

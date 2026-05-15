@@ -1,3 +1,7 @@
+## 1.2.2
+
+- **Find in note (Ctrl+F)** — wired up CodeMirror's official `@codemirror/search` extension, so the editor now exposes a full-featured search panel with case-sensitivity, whole-word, regex, replace, and prev/next navigation. Ctrl+F from preview mode auto-switches the editor to Split so the search panel is visible. Selection-match highlighting is on by default
+
 ## 1.2.1
 
 - **Keyboard shortcuts cheat-sheet** — press `?` anywhere outside an input to open a modal listing every keybinding the app knows about, grouped by Navigation / Editing / Boards. Mirrors Obsidian's hotkeys help overlay. Press `Esc` (or click outside) to dismiss
