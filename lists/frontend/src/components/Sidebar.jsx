@@ -364,9 +364,8 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
 
   return (
     <aside className="w-full md:w-64 bg-surface-2 border-r border-line-1 p-4 overflow-y-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-display font-bold tracking-tight text-ink-1">📋 Lists</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end mb-4">
+        <div className="flex items-center gap-2 flex-wrap">
           {onOpenDailyNote && (
             <button
               onClick={() => onOpenDailyNote()}
