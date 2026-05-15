@@ -4,6 +4,7 @@ import { EditorView, keymap } from '@codemirror/view';
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
+import { foldGutter, foldKeymap } from '@codemirror/language';
 import { oneDark } from '@codemirror/theme-one-dark';
 
 const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onLinkAutocomplete, onTagAutocomplete, onSlashAutocomplete, className = '' }, ref) {
@@ -144,7 +145,8 @@ const NoteSource = forwardRef(function NoteSource({ value, onChange, onBlur, onL
         history(),
         search({ top: true }),
         highlightSelectionMatches(),
-        keymap.of([...searchKeymap, ...defaultKeymap, ...historyKeymap]),
+        foldGutter(),
+        keymap.of([...searchKeymap, ...foldKeymap, ...defaultKeymap, ...historyKeymap]),
         markdown(),
         oneDark,
         EditorView.lineWrapping,
