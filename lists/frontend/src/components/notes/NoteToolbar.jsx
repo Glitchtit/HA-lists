@@ -2,6 +2,32 @@ import { useState } from 'react';
 
 const TONES = ['neutral', 'professional', 'casual', 'concise', 'friendly', 'technical'];
 
+function safeFilename(name) {
+  return String(name || 'Untitled')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120) || 'Untitled';
+}
+
+function exportNote(note) {
+  if (!note) return;
+  const title = note.title || 'Untitled note';
+  const body = note.body || '';
+  // Prepend an H1 if the body doesn't already start with the title as a heading.
+  const startsWithTitle = body.split(/\r?\n/, 1)[0]?.trim() === `# ${title}`.trim();
+  const content = startsWithTitle ? body : `# ${title}\n\n${body}`;
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safeFilename(title)}.md`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function Spinner() {
   return (
     <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-ink-3 border-t-transparent" />
@@ -83,6 +109,17 @@ export default function NoteToolbar({ note, onAction, lists = [] }) {
 
       {btn('extract-tasks', 'Extract tasks', () => setListPickerOpen(true))}
       {btn('outline', 'Outline')}
+
+      <span className="ml-2 text-[11px] uppercase tracking-wider text-ink-3">Export</span>
+      <button
+        type="button"
+        disabled={!note}
+        onClick={() => exportNote(note)}
+        className="inline-flex items-center gap-1.5 rounded-md border border-line-1 bg-surface-2 px-2.5 py-1 text-xs text-ink-2 hover:bg-surface-3 disabled:opacity-50"
+        title="Download note as .md"
+      >
+        ⬇️ .md
+      </button>
 
       <Modal open={continueOpen} onClose={() => setContinueOpen(false)} title="Continue writing">
         <textarea
