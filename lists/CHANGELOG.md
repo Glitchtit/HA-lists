@@ -1,3 +1,7 @@
+## 1.3.8
+
+- **Dataview queries (minimal)** — fenced `dataview` code blocks now render as a live note list, à la the Obsidian Dataview plugin. Supported one-liner directives: `tag: foo`, `folder_id: 3` (or `null` for Unfiled), `limit: 20`, `sort: title|updated|created`. Each result is clickable and jumps to the note. Backend: new `POST /api/notes/query` does the filtering server-side with FTS-friendly indexes; unknown lines render a non-fatal warning so you can iterate on the query without crashing the preview
+
 ## 1.3.7
 
 - **Heading folding in source editor** — wired CodeMirror's `foldGutter` + `foldKeymap` so the editor now shows a fold gutter on the left. Click the chevron next to any heading (or fenced code block) to collapse the section underneath. `Ctrl+Shift+[` and `Ctrl+Shift+]` collapse / expand the current section. Helpful for long notes with deep outlines

@@ -266,6 +266,66 @@ async def get_note_tags():
     return out
 
 
+@router.post("/query")
+async def query_notes(body: dict):
+    """Minimal Dataview-style query over notes.
+
+    Body keys:
+    - ``tag``: filter to notes whose body contains this tag (inline or
+      frontmatter), case-insensitive on tag name
+    - ``folder_id``: filter to notes inside this folder (use ``null`` for
+      Unfiled)
+    - ``limit``: cap results (default 50, max 200)
+    - ``sort``: ``title`` (default), ``updated``, ``created``
+
+    Returns ``[{id, title, icon, folder_id, updated_at}]``.
+    """
+    conn = get_connection()
+    tag = (body.get("tag") or "").strip().lstrip("#").lower() or None
+    folder_id = body.get("folder_id", "__missing__")
+    limit = min(200, max(1, int(body.get("limit") or 50)))
+    sort = (body.get("sort") or "title").lower()
+    order_clause = {
+        "title": "title COLLATE NOCASE ASC",
+        "updated": "updated_at DESC",
+        "created": "created_at DESC",
+    }.get(sort, "title COLLATE NOCASE ASC")
+
+    clauses = ["archived = 0"]
+    params: list = []
+    if folder_id == "__missing__":
+        pass
+    elif folder_id is None:
+        clauses.append("folder_id IS NULL")
+    else:
+        clauses.append("folder_id = ?")
+        params.append(int(folder_id))
+
+    sql = "SELECT id, title, icon, folder_id, updated_at, body FROM notes"
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += f" ORDER BY {order_clause} LIMIT ?"
+    params.append(limit * 4 if tag else limit)
+    rows = conn.execute(sql, params).fetchall()
+
+    out = []
+    for r in rows:
+        if tag is not None:
+            tags = {t.lower() for t in _extract_tags_from_body(r["body"] or "")}
+            if tag not in tags:
+                continue
+        out.append({
+            "id": r["id"],
+            "title": r["title"],
+            "icon": r["icon"] or "📄",
+            "folder_id": r["folder_id"],
+            "updated_at": r["updated_at"],
+        })
+        if len(out) >= limit:
+            break
+    return out
+
+
 @router.get("/vault_stats")
 async def get_vault_stats():
     """Aggregate counts across the whole notes vault.

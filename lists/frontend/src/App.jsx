@@ -432,6 +432,7 @@ export default function App() {
               onChange={handleNoteChange}
               onWikilinkClick={handleWikilinkClick}
               onWikilinkOpenInBackground={handleWikilinkOpenInBackground}
+              onNoteSelect={(id) => setActiveEntity({ kind: 'note', id })}
               onEmbedFetch={handleEmbedFetch}
               onExtracted={() => { loadTopLevel(); flashToast('Extracted to new note') }}
             />

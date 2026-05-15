@@ -101,6 +101,8 @@ export const removeNoteAlias = (noteId, alias) =>
   api.delete(`/notes/${noteId}/aliases/${encodeURIComponent(alias)}`);
 export const getNoteGraph = () => api.get('/notes/graph').then(r => r.data);
 export const getVaultStats = () => api.get('/notes/vault_stats').then(r => r.data);
+export const queryNotes = (payload) =>
+  api.post('/notes/query', payload || {}).then(r => r.data);
 export const getNoteTags = () => api.get('/notes/tags').then(r => r.data);
 export const renameNoteTag = (oldName, newName) =>
   api.post('/notes/tags/rename', { old: oldName, new: newName }).then(r => r.data);
