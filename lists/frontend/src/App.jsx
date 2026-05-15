@@ -15,6 +15,7 @@ import HotkeysModal from './components/HotkeysModal'
 import WorkspacesModal from './components/WorkspacesModal'
 import CustomCSSModal, { applyStoredCSS } from './components/CustomCSSModal'
 import VaultStatsModal from './components/VaultStatsModal'
+import DailyCalendarModal from './components/DailyCalendarModal'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -45,6 +46,7 @@ export default function App() {
   const [workspacesOpen, setWorkspacesOpen] = useState(false)
   const [cssOpen, setCssOpen] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   // Apply user CSS once on mount; survives across sessions.
   useEffect(() => { applyStoredCSS() }, [])
@@ -275,9 +277,9 @@ export default function App() {
     }
   }
 
-  async function openDailyNote() {
+  async function openDailyNote(date) {
     try {
-      const n = await api.getOrCreateDailyNote()
+      const n = await api.getOrCreateDailyNote(date)
       await loadTopLevel()
       setActiveEntity({ kind: 'note', id: n.id })
     } catch (e) {
@@ -391,6 +393,7 @@ export default function App() {
         onOpenWorkspaces={() => setWorkspacesOpen(true)}
         onOpenCustomCSS={() => setCssOpen(true)}
         onOpenStats={() => setStatsOpen(true)}
+        onOpenCalendar={() => setCalendarOpen(true)}
         recent={recent}
       />
 
@@ -485,6 +488,11 @@ export default function App() {
       <HotkeysModal open={hotkeysOpen} onClose={() => setHotkeysOpen(false)} />
       <CustomCSSModal open={cssOpen} onClose={() => setCssOpen(false)} />
       <VaultStatsModal open={statsOpen} onClose={() => setStatsOpen(false)} />
+      <DailyCalendarModal
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        onOpenDailyNote={(iso) => { setCalendarOpen(false); openDailyNote(iso); }}
+      />
       <WorkspacesModal
         open={workspacesOpen}
         onClose={() => setWorkspacesOpen(false)}

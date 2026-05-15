@@ -93,6 +93,8 @@ export const getOrCreateDailyNote = (date, folderId) =>
       ...(folderId != null ? { folder_id: folderId } : {}),
     },
   }).then(r => r.data);
+export const getDailyCalendar = (year, month) =>
+  api.get('/notes/daily/calendar', { params: { year, month } }).then(r => r.data);
 export const getNoteAliases = (noteId) =>
   api.get(`/notes/${noteId}/aliases`).then(r => r.data);
 export const addNoteAlias = (noteId, alias) =>

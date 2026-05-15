@@ -1,3 +1,7 @@
+## 1.3.9
+
+- **Daily-notes calendar** — Obsidian Calendar plugin equivalent. New 🗓️ button in the sidebar header opens a month-grid; cells with existing daily notes are tinted cobalt with a dot marker, today is ringed in International Orange. Click any day to open (or auto-create) that day's note via the existing `/api/notes/daily` endpoint. ‹ › arrows page through months. Backed by new `GET /api/notes/daily/calendar?year=…&month=…`
+
 ## 1.3.8
 
 - **Dataview queries (minimal)** — fenced `dataview` code blocks now render as a live note list, à la the Obsidian Dataview plugin. Supported one-liner directives: `tag: foo`, `folder_id: 3` (or `null` for Unfiled), `limit: 20`, `sort: title|updated|created`. Each result is clickable and jumps to the note. Backend: new `POST /api/notes/query` does the filtering server-side with FTS-friendly indexes; unknown lines render a non-fatal warning so you can iterate on the query without crashing the preview

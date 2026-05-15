@@ -99,6 +99,33 @@ async def list_notes(
     return [_row_to_note(r) for r in rows]
 
 
+@router.get("/daily/calendar")
+async def daily_calendar(year: int, month: int):
+    """Return ``[YYYY-MM-DD]`` for every daily note within the given month.
+
+    Title pattern is the same ``YYYY-MM-DD`` used by the daily-note endpoint.
+    Useful for rendering a month-grid where each cell knows whether a note
+    exists for that day.
+    """
+    if not (1 <= month <= 12) or not (1970 <= year <= 2999):
+        raise HTTPException(400, "year/month out of range")
+    conn = get_connection()
+    prefix = f"{year:04d}-{month:02d}-"
+    rows = conn.execute(
+        "SELECT title FROM notes WHERE archived = 0 AND title LIKE ? || '%'",
+        (prefix,),
+    ).fetchall()
+    out: list[str] = []
+    for r in rows:
+        t = r["title"] or ""
+        try:
+            date_cls.fromisoformat(t)
+            out.append(t)
+        except ValueError:
+            continue
+    return sorted(set(out))
+
+
 @router.post("/daily", response_model=Note)
 async def get_or_create_daily_note(date: str | None = None, folder_id: int | None = None):
     """Return today's daily note (or one for a given ISO date), creating it if missing.
