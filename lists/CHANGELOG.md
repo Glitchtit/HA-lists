@@ -1,3 +1,7 @@
+## 1.3.10
+
+- Drop the "📋 Lists" title from the sidebar header — the addon panel and Home Assistant sidebar already label the app, so the in-app title was redundant and crowded out the action buttons (📅 Today, 🎲, 📋 templates, 💼, 🎨, 📊, 🗓️, 🕸️) on narrow widths
+
 ## 1.3.9
 
 - **Daily-notes calendar** — Obsidian Calendar plugin equivalent. New 🗓️ button in the sidebar header opens a month-grid; cells with existing daily notes are tinted cobalt with a dot marker, today is ringed in International Orange. Click any day to open (or auto-create) that day's note via the existing `/api/notes/daily` endpoint. ‹ › arrows page through months. Backed by new `GET /api/notes/daily/calendar?year=…&month=…`
