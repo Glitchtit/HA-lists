@@ -82,6 +82,13 @@ export const resolveNote = (title) =>
     if (e.response?.status === 404) return null;
     throw e;
   });
+export const getOrCreateDailyNote = (date, folderId) =>
+  api.post('/notes/daily', null, {
+    params: {
+      ...(date ? { date } : {}),
+      ...(folderId != null ? { folder_id: folderId } : {}),
+    },
+  }).then(r => r.data);
 
 // ── AI note actions ────────────────────────────────────────────────────────
 export const aiNoteSummarize    = (noteId) =>

@@ -1,3 +1,7 @@
+## 1.0.5
+
+- **Daily notes** — Obsidian-style date-titled notes for journaling. Click 📅 Today in the sidebar header, or press `Ctrl+Alt+T` from anywhere, to open today's note (auto-created on first use with title `YYYY-MM-DD` and 📅 icon). New `POST /api/notes/daily?date=YYYY-MM-DD` endpoint creates-or-returns a daily note for any date, so future calendar / weekly views can hook into it
+
 ## 1.0.4
 - Add **"What's new"** popup — when you open Lists after an update, a dismissable modal shows the changelog entries for every version released since your last visit. Markers persist per-browser via `localStorage` (`lists_whatsnew_lastSeen`); first visit silently marks the current version as seen so users don't get a wall of historical changelog on first install
 

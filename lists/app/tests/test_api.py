@@ -475,6 +475,27 @@ class TestNotes:
         assert ids[0] == c
         assert ids.index(b) < ids.index(a)
 
+    def test_daily_note_creates_and_reuses(self, client):
+        r = client.post("/api/notes/daily", params={"date": "2026-05-15"})
+        assert r.status_code == 200
+        first = r.json()
+        assert first["title"] == "2026-05-15"
+        assert first["icon"] == "📅"
+        assert first["body"] == ""
+        r2 = client.post("/api/notes/daily", params={"date": "2026-05-15"})
+        assert r2.status_code == 200
+        assert r2.json()["id"] == first["id"]
+
+    def test_daily_note_default_is_today(self, client):
+        from datetime import datetime
+        r = client.post("/api/notes/daily")
+        assert r.status_code == 200
+        assert r.json()["title"] == datetime.now().strftime("%Y-%m-%d")
+
+    def test_daily_note_rejects_bad_date(self, client):
+        r = client.post("/api/notes/daily", params={"date": "not-a-date"})
+        assert r.status_code == 400
+
 
 class TestWikilinkParser:
     def test_plain(self):
