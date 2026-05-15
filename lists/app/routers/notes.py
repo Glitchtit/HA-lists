@@ -139,15 +139,73 @@ async def get_or_create_daily_note(date: str | None = None, folder_id: int | Non
 
 @router.get("/resolve")
 async def resolve_note(title: str):
-    """Case-insensitive title lookup; returns ``{"note_id": …}`` or 404."""
+    """Case-insensitive title-or-alias lookup; returns ``{"note_id": …}`` or 404.
+
+    Falls back to ``note_aliases`` if no title matches, so wikilinks like
+    ``[[Alt Name]]`` jump to the canonical note when registered as an alias.
+    """
     conn = get_connection()
     row = conn.execute(
         "SELECT id FROM notes WHERE LOWER(title) = LOWER(?) ORDER BY id ASC LIMIT 1",
         (title,),
     ).fetchone()
     if not row:
+        row = conn.execute(
+            """SELECT n.id AS id
+                 FROM note_aliases a
+                 JOIN notes n ON n.id = a.note_id
+                WHERE LOWER(a.alias) = LOWER(?)
+                ORDER BY n.id ASC
+                LIMIT 1""",
+            (title,),
+        ).fetchone()
+    if not row:
         raise HTTPException(404, "Note not found")
     return {"note_id": row["id"]}
+
+
+@router.get("/{note_id}/aliases", response_model=list[str])
+async def list_aliases(note_id: int):
+    conn = get_connection()
+    if not conn.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,)).fetchone():
+        raise HTTPException(404, "Note not found")
+    rows = conn.execute(
+        "SELECT alias FROM note_aliases WHERE note_id = ? ORDER BY alias",
+        (note_id,),
+    ).fetchall()
+    return [r["alias"] for r in rows]
+
+
+@router.post("/{note_id}/aliases", response_model=list[str], status_code=201)
+async def add_alias(note_id: int, body: dict):
+    alias = str(body.get("alias", "")).strip()
+    if not alias:
+        raise HTTPException(400, "alias must be non-empty")
+    conn = get_connection()
+    if not conn.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,)).fetchone():
+        raise HTTPException(404, "Note not found")
+    existing = conn.execute(
+        "SELECT id FROM notes WHERE LOWER(title) = LOWER(?) AND id != ?",
+        (alias, note_id),
+    ).fetchone()
+    if existing:
+        raise HTTPException(409, "alias conflicts with an existing note title")
+    conn.execute(
+        "INSERT OR IGNORE INTO note_aliases (note_id, alias) VALUES (?, ?)",
+        (note_id, alias),
+    )
+    conn.commit()
+    return await list_aliases(note_id)
+
+
+@router.delete("/{note_id}/aliases/{alias}", status_code=204)
+async def remove_alias(note_id: int, alias: str):
+    conn = get_connection()
+    conn.execute(
+        "DELETE FROM note_aliases WHERE note_id = ? AND LOWER(alias) = LOWER(?)",
+        (note_id, alias),
+    )
+    conn.commit()
 
 
 @router.get("/{note_id}", response_model=Note)

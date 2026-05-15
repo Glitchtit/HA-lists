@@ -1,3 +1,7 @@
+## 1.0.9
+
+- **Note aliases** — alternative names that wikilinks resolve to, mirroring Obsidian's frontmatter `aliases:`. New `note_aliases` table + `/api/notes/{id}/aliases` GET/POST/DELETE endpoints; `/api/notes/resolve` now falls back to alias lookup, so `[[Alt Name]]` jumps to the canonical note. Right-pane gains an Aliases tab to add/remove aliases inline; collisions with an existing note title return 409 so the canonical title always wins
+
 ## 1.0.8
 
 - **Random note** — new 🎲 button in the sidebar header opens a uniformly-random non-archived note (skipping the currently-open one when possible). Mirrors Obsidian's Random Note core plugin; useful for surprise re-discovery of older notes

@@ -89,6 +89,12 @@ export const getOrCreateDailyNote = (date, folderId) =>
       ...(folderId != null ? { folder_id: folderId } : {}),
     },
   }).then(r => r.data);
+export const getNoteAliases = (noteId) =>
+  api.get(`/notes/${noteId}/aliases`).then(r => r.data);
+export const addNoteAlias = (noteId, alias) =>
+  api.post(`/notes/${noteId}/aliases`, { alias }).then(r => r.data);
+export const removeNoteAlias = (noteId, alias) =>
+  api.delete(`/notes/${noteId}/aliases/${encodeURIComponent(alias)}`);
 
 // ── AI note actions ────────────────────────────────────────────────────────
 export const aiNoteSummarize    = (noteId) =>
