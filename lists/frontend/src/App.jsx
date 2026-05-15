@@ -14,6 +14,7 @@ import TabBar from './components/TabBar'
 import HotkeysModal from './components/HotkeysModal'
 import WorkspacesModal from './components/WorkspacesModal'
 import CustomCSSModal, { applyStoredCSS } from './components/CustomCSSModal'
+import VaultStatsModal from './components/VaultStatsModal'
 import BoardView from './components/boards/BoardView.jsx'
 import CommandPalette from './components/search/CommandPalette.jsx'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -43,6 +44,7 @@ export default function App() {
   const [hotkeysOpen, setHotkeysOpen] = useState(false)
   const [workspacesOpen, setWorkspacesOpen] = useState(false)
   const [cssOpen, setCssOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
 
   // Apply user CSS once on mount; survives across sessions.
   useEffect(() => { applyStoredCSS() }, [])
@@ -372,6 +374,7 @@ export default function App() {
         onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
         onOpenWorkspaces={() => setWorkspacesOpen(true)}
         onOpenCustomCSS={() => setCssOpen(true)}
+        onOpenStats={() => setStatsOpen(true)}
         recent={recent}
       />
 
@@ -464,6 +467,7 @@ export default function App() {
       />
       <HotkeysModal open={hotkeysOpen} onClose={() => setHotkeysOpen(false)} />
       <CustomCSSModal open={cssOpen} onClose={() => setCssOpen(false)} />
+      <VaultStatsModal open={statsOpen} onClose={() => setStatsOpen(false)} />
       <WorkspacesModal
         open={workspacesOpen}
         onClose={() => setWorkspacesOpen(false)}

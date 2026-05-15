@@ -209,6 +209,50 @@ async def get_note_tags():
     return out
 
 
+@router.get("/vault_stats")
+async def get_vault_stats():
+    """Aggregate counts across the whole notes vault.
+
+    Returns total notes, archived count, total words and characters
+    across non-archived bodies, distinct tags, total wikilinks, and
+    total aliases — handy for an Obsidian-style Stats panel.
+    """
+    conn = get_connection()
+    total = conn.execute("SELECT COUNT(*) AS c FROM notes").fetchone()["c"]
+    archived = conn.execute(
+        "SELECT COUNT(*) AS c FROM notes WHERE archived = 1"
+    ).fetchone()["c"]
+    words = 0
+    chars = 0
+    tag_set: set[str] = set()
+    for r in conn.execute("SELECT body FROM notes WHERE archived = 0").fetchall():
+        body = r["body"] or ""
+        chars += len(body)
+        # Strip code fences for a slightly fairer word count
+        stripped = _FENCE_RE.sub(" ", body)
+        words += sum(1 for _ in re.finditer(r"\S+", stripped))
+        for t in _extract_tags_from_body(body):
+            tag_set.add(t)
+    links = conn.execute("SELECT COUNT(*) AS c FROM note_links").fetchone()["c"]
+    aliases = conn.execute("SELECT COUNT(*) AS c FROM note_aliases").fetchone()["c"]
+    folders = conn.execute("SELECT COUNT(*) AS c FROM folders WHERE archived = 0").fetchone()["c"]
+    boards = conn.execute("SELECT COUNT(*) AS c FROM boards WHERE archived = 0").fetchone()["c"]
+    lists_n = conn.execute("SELECT COUNT(*) AS c FROM lists WHERE archived = 0").fetchone()["c"]
+    return {
+        "notes_total": total,
+        "notes_archived": archived,
+        "notes_active": total - archived,
+        "folders": folders,
+        "boards": boards,
+        "lists": lists_n,
+        "words": words,
+        "characters": chars,
+        "tags": len(tag_set),
+        "wikilinks": links,
+        "aliases": aliases,
+    }
+
+
 @router.get("/graph")
 async def get_note_graph():
     """Return the full note-link graph for visualization.

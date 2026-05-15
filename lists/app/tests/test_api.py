@@ -576,6 +576,29 @@ class TestNotes:
         edges = client.get("/api/notes/graph").json()["edges"]
         assert any(e["source"] == a and e["target"] == b for e in edges)
 
+    def test_vault_stats(self, client):
+        client.post("/api/notes/", json={"title": "A", "body": "Hello world #tag1 [[B]]"})
+        b = client.post("/api/notes/", json={"title": "B", "body": "B content #tag2"}).json()["id"]
+        client.post(f"/api/notes/{b}/aliases", json={"alias": "Beta"})
+        archived = client.post("/api/notes/", json={"title": "Old"}).json()["id"]
+        client.patch(f"/api/notes/{archived}", json={"archived": True})
+        client.post("/api/folders/", json={"name": "F"})
+        client.post("/api/lists/", json={"name": "L"})
+
+        r = client.get("/api/notes/vault_stats")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["notes_total"] == 3
+        assert data["notes_archived"] == 1
+        assert data["notes_active"] == 2
+        assert data["folders"] >= 1
+        assert data["lists"] >= 1
+        assert data["tags"] >= 2
+        assert data["aliases"] == 1
+        assert data["wikilinks"] == 1
+        assert data["words"] > 0
+        assert data["characters"] > 0
+
     def test_outgoing_links_resolve_and_unresolved(self, client):
         a = client.post("/api/notes/", json={"title": "A", "body": "[[B]] then ![[Ghost]]"}).json()["id"]
         b = client.post("/api/notes/", json={"title": "B"}).json()["id"]
