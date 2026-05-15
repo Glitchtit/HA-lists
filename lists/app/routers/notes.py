@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import date as date_cls, datetime
 
@@ -135,6 +136,77 @@ async def get_or_create_daily_note(date: str | None = None, folder_id: int | Non
     note_id = cursor.lastrowid
     conn.commit()
     return await get_note(note_id)
+
+
+_TAG_RE = re.compile(r"(?<![\w/])#([A-Za-z0-9][\w/-]{0,49})")
+_FENCE_RE = re.compile(r"```[\s\S]*?```")
+_FRONTMATTER_RE = re.compile(r"^---\r?\n([\s\S]*?)\r?\n---\r?\n?")
+
+
+def _extract_tags_from_body(body: str) -> set[str]:
+    """Extract Obsidian-style #tags from a note body.
+
+    Considers both inline hashtags and the ``tags:`` frontmatter field
+    (in either flow or block-list form). Skips fenced code blocks so
+    ``# python`` syntax doesn't yield bogus tags.
+    """
+    tags: set[str] = set()
+    if not body:
+        return tags
+    front = _FRONTMATTER_RE.match(body)
+    if front:
+        in_tags_block = False
+        for raw_line in front.group(1).splitlines():
+            stripped = raw_line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped.startswith("tags:") or stripped.startswith("tag:"):
+                rest = stripped.split(":", 1)[1].strip()
+                if rest.startswith("[") and rest.endswith("]"):
+                    for piece in rest[1:-1].split(","):
+                        v = piece.strip().strip("'\"")
+                        if v:
+                            tags.add(v.lstrip("#"))
+                    in_tags_block = False
+                elif rest == "":
+                    in_tags_block = True
+                else:
+                    tags.add(rest.strip("'\"").lstrip("#"))
+                    in_tags_block = False
+            elif in_tags_block and stripped.startswith("-"):
+                v = stripped.lstrip("-").strip().strip("'\"")
+                if v:
+                    tags.add(v.lstrip("#"))
+            else:
+                in_tags_block = False
+        body = body[front.end():]
+    body_no_code = _FENCE_RE.sub(" ", body)
+    for m in _TAG_RE.finditer(body_no_code):
+        tags.add(m.group(1))
+    return tags
+
+
+@router.get("/tags")
+async def get_note_tags():
+    """Aggregate Obsidian-style tags from all non-archived note bodies.
+
+    Returns a list of ``{"tag": ..., "count": N, "note_ids": [...]}`` sorted
+    by count descending, then tag ascending.
+    """
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT id, body FROM notes WHERE archived = 0"
+    ).fetchall()
+    buckets: dict[str, list[int]] = {}
+    for r in rows:
+        for tag in _extract_tags_from_body(r["body"] or ""):
+            buckets.setdefault(tag, []).append(r["id"])
+    out = [
+        {"tag": t, "count": len(ids), "note_ids": ids}
+        for t, ids in buckets.items()
+    ]
+    out.sort(key=lambda x: (-x["count"], x["tag"].lower()))
+    return out
 
 
 @router.get("/graph")

@@ -1,3 +1,7 @@
+## 1.1.3
+
+- **Tags pane** — Obsidian-style tag aggregation. Right-pane now has a Tags tab that lists every `#tag` used across notes (count desc, then alphabetical). Picks up tags from inline body hashtags **and** frontmatter `tags:` (both flow `[a, b]` and block-list forms). Skips fenced code blocks so `# python` shebangs don't yield bogus tags. Click a tag to expand the notes that contain it; click a note to jump there. Served by new `GET /api/notes/tags`
+
 ## 1.1.2
 
 - **Graph view** — Obsidian's signature feature. Click 🕸️ in the sidebar header to open a force-directed graph of every non-archived note, with edges drawn for resolved wikilinks (cobalt) and embeds (orange). Node radius scales with link degree, hover dims unrelated edges, click jumps into that note. Backend serves the graph via `GET /api/notes/graph`; aliases resolve as edges to the canonical note, dangling links and self-loops are dropped. Layout runs entirely in the browser — no extra dependencies, no service worker

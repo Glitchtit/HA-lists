@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Outline from './Outline';
 import Backlinks from './Backlinks';
 import Aliases from './Aliases';
+import TagsPane from './TagsPane';
 
 export default function NotesRightPane({ note, onSelect }) {
   const [tab, setTab] = useState('outline');
@@ -43,7 +44,7 @@ export default function NotesRightPane({ note, onSelect }) {
   return (
     <aside className="hidden md:flex md:w-72 flex-col border-l border-line-1 bg-surface-1">
       <div className="flex items-center border-b border-line-1 bg-surface-2 text-xs">
-        {['outline', 'backlinks', 'aliases'].map((t) => (
+        {['outline', 'backlinks', 'aliases', 'tags'].map((t) => (
           <button
             key={t}
             type="button"
@@ -71,8 +72,10 @@ export default function NotesRightPane({ note, onSelect }) {
           <Outline body={note.body || ''} />
         ) : tab === 'backlinks' ? (
           <Backlinks noteId={note.id} onSelect={onSelect} />
-        ) : (
+        ) : tab === 'aliases' ? (
           <Aliases noteId={note.id} />
+        ) : (
+          <TagsPane onSelect={onSelect} />
         )}
       </div>
     </aside>

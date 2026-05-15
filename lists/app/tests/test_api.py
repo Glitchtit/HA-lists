@@ -553,6 +553,36 @@ class TestNotes:
         edges = client.get("/api/notes/graph").json()["edges"]
         assert any(e["source"] == a and e["target"] == b for e in edges)
 
+    def test_tag_aggregation_inline_and_frontmatter(self, client):
+        client.post("/api/notes/", json={
+            "title": "T1",
+            "body": "Use #python and #data-science here",
+        })
+        client.post("/api/notes/", json={
+            "title": "T2",
+            "body": "---\ntags: [python, art]\n---\nbody",
+        })
+        client.post("/api/notes/", json={
+            "title": "T3",
+            "body": "---\ntags:\n  - python\n  - cooking\n---\nbody",
+        })
+        # Inline hashtags inside fenced code should NOT count
+        client.post("/api/notes/", json={
+            "title": "T4",
+            "body": "```\n# not a tag\n```\nbut #real is",
+        })
+        data = client.get("/api/notes/tags").json()
+        tags = {entry["tag"]: entry["count"] for entry in data}
+        assert tags.get("python") == 3
+        assert tags.get("data-science") == 1
+        assert tags.get("art") == 1
+        assert tags.get("cooking") == 1
+        assert tags.get("real") == 1
+        assert "not" not in tags  # fenced code stripped
+        # Sort: count desc, then tag asc
+        counts = [entry["count"] for entry in data]
+        assert counts == sorted(counts, reverse=True)
+
 
 class TestWikilinkParser:
     def test_plain(self):
