@@ -576,6 +576,29 @@ class TestNotes:
         edges = client.get("/api/notes/graph").json()["edges"]
         assert any(e["source"] == a and e["target"] == b for e in edges)
 
+    def test_rename_rewrites_wikilinks_in_other_notes(self, client):
+        a = client.post("/api/notes/", json={"title": "Origin"}).json()["id"]
+        client.post("/api/notes/", json={"title": "X", "body": "See [[Origin]] and [[Origin|alt]] and ![[Origin]] and [[Origin#Sec]]"})
+        client.post("/api/notes/", json={"title": "Y", "body": "plain text"})
+        client.patch(f"/api/notes/{a}", json={"title": "Renamed"})
+        notes = client.get("/api/notes/").json()
+        x = next(n for n in notes if n["title"] == "X")
+        assert "[[Renamed]]" in x["body"]
+        assert "[[Renamed|alt]]" in x["body"]
+        assert "![[Renamed]]" in x["body"]
+        assert "[[Renamed#Sec]]" in x["body"]
+        # The renamed note's own body must be untouched
+        a_after = client.get(f"/api/notes/{a}").json()
+        assert a_after["title"] == "Renamed"
+
+    def test_rename_is_case_insensitive_on_lookup(self, client):
+        a = client.post("/api/notes/", json={"title": "Origin"}).json()["id"]
+        client.post("/api/notes/", json={"title": "X", "body": "see [[ORIGIN]] and [[origin|x]]"})
+        client.patch(f"/api/notes/{a}", json={"title": "NewName"})
+        x = next(n for n in client.get("/api/notes/").json() if n["title"] == "X")
+        assert "[[NewName]]" in x["body"]
+        assert "[[NewName|x]]" in x["body"]
+
     def test_vault_stats(self, client):
         client.post("/api/notes/", json={"title": "A", "body": "Hello world #tag1 [[B]]"})
         b = client.post("/api/notes/", json={"title": "B", "body": "B content #tag2"}).json()["id"]
@@ -743,11 +766,19 @@ class TestBacklinks:
         assert bls[0]["note_id"] == a
         assert bls[0]["title"] == "A-renamed"
 
-    def test_target_rename_breaks_link(self, client):
+    def test_target_rename_follows_links(self, client):
+        """As of v1.3.4: renaming a note rewrites wikilinks in other notes,
+        so the backlink follows the new title instead of breaking."""
         a = client.post("/api/notes/", json={"title": "A", "body": "ref [[B]]"}).json()["id"]
         b = client.post("/api/notes/", json={"title": "B"}).json()["id"]
         client.patch(f"/api/notes/{b}", json={"title": "B2"})
-        assert client.get(f"/api/notes/{b}/backlinks").json() == []
+        backlinks = client.get(f"/api/notes/{b}/backlinks").json()
+        assert len(backlinks) == 1
+        assert backlinks[0]["note_id"] == a
+        # Source body got rewritten too
+        a_body = client.get(f"/api/notes/{a}").json()["body"]
+        assert "[[B2]]" in a_body
+        assert "[[B]]" not in a_body
 
     def test_resolve_case_insensitive(self, client):
         nid = client.post("/api/notes/", json={"title": "Hello World"}).json()["id"]
