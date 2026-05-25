@@ -39,7 +39,11 @@ add_item:
   description: >-
     Add an item to a named list. Example: "add milk to the groceries list".
     The list is matched by name (case-insensitive). Optionally assign it to a
-    person, set a due date, priority, or spiciness.
+    person, set a due date, priority, or spiciness. This is a generic
+    task/checklist list, NOT the grocery shopping list backed by stock — for
+    groceries you want to buy, use ha_storage.add_to_shopping_list_by_name.
+    Note: assigned_to must be a Home Assistant person entity_id (e.g.
+    person.alice), not a bare first name.
   fields:
     list:
       name: List
@@ -103,9 +107,10 @@ breakdown_item:
   description: >-
     Use AI to break a task into subtasks. Example: "break down plan birthday
     party". The item is matched by title within the named list. Spiciness 1-5
-    controls how much detail (more steps) the breakdown produces. Returns the
-    generated subtasks. If the job does not finish within ~45 s, returns
-    status "timeout" with the task_id.
+    controls how much detail (more steps) the breakdown produces. Returns a
+    response: the generated subtasks as a list of {id, title}. If the AI job
+    is still running after ~45 s it returns status "timeout" — call again
+    shortly.
   fields:
     list:
       name: List
@@ -137,9 +142,10 @@ compile_braindump:
   description: >-
     Turn a freeform brain dump into list items. Example: "make a moving list
     from: pack books, call movers, change address". The text is split and
-    structured into ordered items appended to the named list. Returns the
-    resulting items. If the job does not finish within ~45 s, returns status
-    "timeout" with the task_id.
+    structured into ordered items appended to the named list. Returns a
+    response: the resulting list items as a list of {id, title}. If the AI job
+    is still running after ~45 s it returns status "timeout" — call again
+    shortly.
   fields:
     list:
       name: List
