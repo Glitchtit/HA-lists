@@ -1,3 +1,7 @@
+## 1.4.0
+
+- **Agent service layer** — the Lists integration now exposes Home Assistant services so a voice/LLM agent can drive the add-on: `ha_lists.create_list`, `ha_lists.add_item` (resolves the list by name), `ha_lists.breakdown_item` and `ha_lists.compile_braindump` (run the async AI jobs and return the resulting subtasks/items), and `ha_lists.find_lists` (name→id lookup). The three read/AI services return structured responses; breakdown/compile poll the AI job to completion (bounded ~45 s, returning a timeout marker otherwise)
+
 ## 1.3.10
 
 - Drop the "📋 Lists" title from the sidebar header — the addon panel and Home Assistant sidebar already label the app, so the in-app title was redundant and crowded out the action buttons (📅 Today, 🎲, 📋 templates, 💼, 🎨, 📊, 🗓️, 🕸️) on narrow widths
