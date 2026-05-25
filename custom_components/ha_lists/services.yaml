@@ -1,0 +1,165 @@
+create_list:
+  name: Create list
+  description: >-
+    Create a new list. Example: "make a list called Groceries". Optionally set
+    an emoji icon, a colour, or place it inside an existing folder by id.
+  fields:
+    name:
+      name: Name
+      description: The list name.
+      required: true
+      example: Groceries
+      selector:
+        text:
+    icon:
+      name: Icon
+      description: Emoji icon for the list. Defaults to 📋.
+      required: false
+      example: 🛒
+      selector:
+        text:
+    color:
+      name: Color
+      description: Optional colour hint for the list.
+      required: false
+      example: cobalt
+      selector:
+        text:
+    folder_id:
+      name: Folder ID
+      description: Optional folder id to place the list in.
+      required: false
+      example: 3
+      selector:
+        number:
+          mode: box
+
+add_item:
+  name: Add item
+  description: >-
+    Add an item to a named list. Example: "add milk to the groceries list".
+    The list is matched by name (case-insensitive). Optionally assign it to a
+    person, set a due date, priority, or spiciness.
+  fields:
+    list:
+      name: List
+      description: Name of the list to add to (matched case-insensitively).
+      required: true
+      example: Groceries
+      selector:
+        text:
+    title:
+      name: Title
+      description: The item text.
+      required: true
+      example: Milk
+      selector:
+        text:
+    notes:
+      name: Notes
+      description: Optional free-text notes for the item.
+      required: false
+      example: Whole, 2 litres
+      selector:
+        text:
+          multiline: true
+    assigned_to:
+      name: Assigned to
+      description: >-
+        Home Assistant person entity_id to assign the item to (e.g.
+        person.alice). Must match a known person.
+      required: false
+      example: person.alice
+      selector:
+        text:
+    due_at:
+      name: Due at
+      description: Optional ISO-8601 due timestamp.
+      required: false
+      example: "2026-06-01T17:00:00Z"
+      selector:
+        text:
+    priority:
+      name: Priority
+      description: Optional integer priority (higher = more important).
+      required: false
+      example: 1
+      selector:
+        number:
+          mode: box
+    spiciness:
+      name: Spiciness
+      description: Detail level 1-5 used later for AI breakdown. Defaults to 3.
+      required: false
+      example: 3
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: slider
+
+breakdown_item:
+  name: Break down item
+  description: >-
+    Use AI to break a task into subtasks. Example: "break down plan birthday
+    party". The item is matched by title within the named list. Spiciness 1-5
+    controls how much detail (more steps) the breakdown produces. Returns the
+    generated subtasks. If the job does not finish within ~45 s, returns
+    status "timeout" with the task_id.
+  fields:
+    list:
+      name: List
+      description: Name of the list containing the item.
+      required: true
+      example: Projects
+      selector:
+        text:
+    item:
+      name: Item
+      description: Title of the item to break down (matched case-insensitively).
+      required: true
+      example: Plan birthday party
+      selector:
+        text:
+    spiciness:
+      name: Spiciness
+      description: Detail level 1-5. Higher means more, finer-grained subtasks.
+      required: false
+      example: 4
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: slider
+
+compile_braindump:
+  name: Compile brain dump
+  description: >-
+    Turn a freeform brain dump into list items. Example: "make a moving list
+    from: pack books, call movers, change address". The text is split and
+    structured into ordered items appended to the named list. Returns the
+    resulting items. If the job does not finish within ~45 s, returns status
+    "timeout" with the task_id.
+  fields:
+    list:
+      name: List
+      description: Name of the list to append the compiled items to.
+      required: true
+      example: Moving
+      selector:
+        text:
+    brain_dump:
+      name: Brain dump
+      description: Freeform text to convert into list items.
+      required: true
+      example: "pack books, call movers, change address"
+      selector:
+        text:
+          multiline: true
+
+find_lists:
+  name: Find lists
+  description: >-
+    Return all lists with their ids and names. Use this to look up the exact
+    list name before calling add_item, breakdown_item, or compile_braindump.
+  fields: {}
