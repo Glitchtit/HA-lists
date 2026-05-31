@@ -35,7 +35,7 @@ import NodeToolbar from './NodeToolbar';
 import BacklinksDrawer from './BacklinksDrawer';
 import TemplatePicker from './TemplatePicker';
 import HelperLines from './HelperLines';
-import { getHelperLines } from './helperLines';
+import { getHelperLines, getResizeHelperLines } from './helperLines';
 import './boards.css';
 
 const NODE_TYPES = {
@@ -245,6 +245,22 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         changes[0].position.y = helpers.snapPosition.y ?? changes[0].position.y;
         setHelperLineV(helpers.vertical);
         setHelperLineH(helpers.horizontal);
+      }
+    }
+    // Snap the moving edge of a resizing (non-group) node to nearby edges/centers.
+    const dimChange = changes.find((c) => c.type === 'dimensions' && c.resizing && c.dimensions);
+    if (dimChange) {
+      const self = nodes.find((n) => n.id === dimChange.id);
+      if (self && self.data?.kind !== 'group') {
+        const posChange = changes.find((c) => c.type === 'position' && c.id === dimChange.id);
+        const snap = getResizeHelperLines(self, dimChange, posChange, nodes);
+        if (snap) {
+          dimChange.dimensions.width = snap.width;
+          dimChange.dimensions.height = snap.height;
+          if (posChange) { posChange.position.x = snap.x; posChange.position.y = snap.y; }
+          setHelperLineV(snap.vertical);
+          setHelperLineH(snap.horizontal);
+        }
       }
     }
     setNodes((ns) => applyNodeChanges(changes, ns));

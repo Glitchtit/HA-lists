@@ -126,3 +126,67 @@ export function getHelperLines(change, nodes, distance = 6) {
       return result;
     }, defaultResult);
 }
+
+// Snapping while *resizing* a node: snap whichever edge is being dragged to a
+// nearby node's edge or center. NodeResizer emits a `dimensions` change (and a
+// `position` change when the top/left handle moves); we derive the new bounds,
+// figure out which edges moved, and align them. Returns the adjusted
+// width/height/x/y plus guide-line coords, or null when nothing is in range.
+export function getResizeHelperLines(self, dimChange, posChange, nodes, distance = 6) {
+  const curL = self.position.x;
+  const curT = self.position.y;
+  const curR = curL + (self.width ?? 0);
+  const curB = curT + (self.height ?? 0);
+  const x0 = posChange ? posChange.position.x : curL;
+  const y0 = posChange ? posChange.position.y : curT;
+  const left = x0;
+  const top = y0;
+  const right = x0 + dimChange.dimensions.width;
+  const bottom = y0 + dimChange.dimensions.height;
+
+  const EPS = 0.5;
+  const movingLeft = Math.abs(left - curL) > EPS;
+  const movingRight = Math.abs(right - curR) > EPS;
+  const movingTop = Math.abs(top - curT) > EPS;
+  const movingBottom = Math.abs(bottom - curB) > EPS;
+
+  let bestX = distance;
+  let bestY = distance;
+  let vertical;
+  let horizontal;
+  let snapLeft = left;
+  let snapRight = right;
+  let snapTop = top;
+  let snapBottom = bottom;
+
+  for (const nb of nodes) {
+    if (nb.id === self.id || nb.data?.kind === 'group') continue;
+    const bL = nb.position.x;
+    const bR = nb.position.x + (nb.width ?? 0);
+    const bT = nb.position.y;
+    const bB = nb.position.y + (nb.height ?? 0);
+    const xs = [bL, bR, (bL + bR) / 2];
+    const ys = [bT, bB, (bT + bB) / 2];
+    if (movingRight) for (const t of xs) { const d = Math.abs(right - t); if (d < bestX) { bestX = d; snapRight = t; vertical = t; } }
+    if (movingLeft) for (const t of xs) { const d = Math.abs(left - t); if (d < bestX) { bestX = d; snapLeft = t; vertical = t; } }
+    if (movingBottom) for (const t of ys) { const d = Math.abs(bottom - t); if (d < bestY) { bestY = d; snapBottom = t; horizontal = t; } }
+    if (movingTop) for (const t of ys) { const d = Math.abs(top - t); if (d < bestY) { bestY = d; snapTop = t; horizontal = t; } }
+  }
+
+  let width = dimChange.dimensions.width;
+  let height = dimChange.dimensions.height;
+  let x = x0;
+  let y = y0;
+  let outV;
+  let outH;
+  if (vertical != null) {
+    const w = snapRight - snapLeft;
+    if (w >= 40) { width = w; x = snapLeft; outV = vertical; }
+  }
+  if (horizontal != null) {
+    const h = snapBottom - snapTop;
+    if (h >= 40) { height = h; y = snapTop; outH = horizontal; }
+  }
+  if (outV == null && outH == null) return null;
+  return { width, height, x, y, vertical: outV, horizontal: outH };
+}

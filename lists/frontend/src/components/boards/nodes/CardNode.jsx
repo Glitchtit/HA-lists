@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Handle, Position, NodeResizer } from 'reactflow';
+import { Handle, Position, NodeResizer, useReactFlow } from 'reactflow';
 import NotePreview from '../../notes/NotePreview';
 
 const PRESET_COLORS = [
@@ -43,6 +43,7 @@ function isLightColor(color) {
 }
 
 function CardNode({ data, selected, id }) {
+  const rf = useReactFlow();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(data?.title || '');
   const [body, setBody] = useState(data?.body || '');
@@ -114,7 +115,14 @@ function CardNode({ data, selected, id }) {
         isVisible={selected}
         minWidth={160}
         minHeight={90}
-        onResizeEnd={(_e, size) => save({ width: size.width, height: size.height, auto_height: false })}
+        onResizeEnd={() => {
+          // Persist the live (possibly edge-snapped) size from the store —
+          // NodeResizer's own callback size is pre-snap.
+          const n = rf.getNode(id);
+          const w = Math.round(n?.width ?? data?.width ?? 0);
+          const h = Math.round(n?.height ?? data?.height ?? 0);
+          if (w && h) save({ width: w, height: h, auto_height: false });
+        }}
       />
       <Handle type="target" position={Position.Top} />
       <div className="bn-header">

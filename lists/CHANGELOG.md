@@ -1,3 +1,7 @@
+## 1.4.5
+
+- **Board: edge snapping while resizing** — the alignment guides that appear when dragging a card now also kick in while *resizing* one. As a card's dragged edge nears another card's edge or center, it snaps flush and shows the orange guide line, so cards line up cleanly when sized to match a neighbour. The final (snapped) size is what gets saved — group containers remain excluded as snap targets
+
 ## 1.4.4
 
 - **Board: fix grey box around groups** — group nodes reuse ReactFlow's reserved `group` type, which ships a default grey border + tinted background + padding that showed as a square grey frame outside the group's own dashed border. Neutralised that built-in wrapper styling so only the group's intended border and selection ring render
