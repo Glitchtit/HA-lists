@@ -18,6 +18,19 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
   const [confirm, setConfirm] = useState(null)
   const [editing, setEditing] = useState(null)     // { kind, id }
   const [dragOver, setDragOver] = useState(null)   // folder id | 'unfiled' | null
+  const [collapsedFolders, setCollapsedFolders] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('lists_collapsed_folders') || '[]')) }
+    catch { return new Set() }
+  })
+
+  function toggleFolderCollapse(folderId) {
+    setCollapsedFolders(prev => {
+      const next = new Set(prev)
+      if (next.has(folderId)) next.delete(folderId); else next.add(folderId)
+      try { localStorage.setItem('lists_collapsed_folders', JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
 
   async function addFolder(e) {
     e.preventDefault()
@@ -534,6 +547,8 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
           activeListId={activeListId}
           activeNoteId={activeNoteId}
           activeBoardId={activeBoardId}
+          collapsed={collapsedFolders.has(folder.id)}
+          onToggleCollapse={() => toggleFolderCollapse(folder.id)}
           onSelect={onSelect}
           adding={adding}
           setAdding={setAdding}
@@ -697,6 +712,7 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
 
 function FolderSection({
   folder, lists, notes, boards, activeListId, activeNoteId, activeBoardId, onSelect, adding, setAdding,
+  collapsed, onToggleCollapse,
   newListName, setNewListName, newNoteTitle, setNewNoteTitle, newBoardName, setNewBoardName,
   addList, addNote, addBoard,
   onFolderMenu, onListMenu, onNoteMenu, onBoardMenu, editing, setEditing, onRefresh,
@@ -706,6 +722,8 @@ function FolderSection({
   const noteKey = `note-folder-${folder.id}`
   const boardKey = `board-folder-${folder.id}`
   const isEditing = editing?.kind === 'folder' && editing.id === folder.id
+  // Expand the folder (if collapsed) before showing an add-item form.
+  const startAdding = (key) => { if (collapsed) onToggleCollapse(); setAdding(key) }
   return (
     <div
       className={`mb-3 rounded transition-colors ${isDragOver ? 'ring-1 ring-brand-cobalt/50 bg-brand-cobalt/5' : ''}`}
@@ -717,12 +735,17 @@ function FolderSection({
         className="flex items-center justify-between text-sm font-medium text-ink-2 mb-1 rounded px-1 py-0.5 hover:bg-surface-3"
         onContextMenu={onFolderMenu}
       >
-        <span className="flex items-center gap-1 flex-1 min-w-0">
+        <span
+          className="flex items-center gap-1 flex-1 min-w-0 cursor-pointer"
+          onClick={() => { if (!isEditing) onToggleCollapse() }}
+          title={collapsed ? 'Expand folder' : 'Collapse folder'}
+        >
+          <span className="text-ink-4 text-[10px] w-3 inline-block text-center select-none">{collapsed ? '▸' : '▾'}</span>
           <span>{folder.icon || '📁'}</span>
           {folder.folder_note_id && !isEditing ? (
             <button
               type="button"
-              onClick={() => onSelect && onSelect({ kind: 'note', id: folder.folder_note_id })}
+              onClick={(e) => { e.stopPropagation(); onSelect && onSelect({ kind: 'note', id: folder.folder_note_id }) }}
               className="truncate text-left text-ink-2 hover:text-ink-1 underline decoration-dotted decoration-ink-4 underline-offset-2"
               title="Open folder note"
             >
@@ -741,21 +764,21 @@ function FolderSection({
         </span>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setAdding(listKey)}
+            onClick={() => startAdding(listKey)}
             className="text-ink-3 hover:text-ink-1 text-xs"
             title="New list in folder"
           >
             📋
           </button>
           <button
-            onClick={() => setAdding(noteKey)}
+            onClick={() => startAdding(noteKey)}
             className="text-ink-3 hover:text-ink-1 text-xs"
             title="New note in folder"
           >
             📄
           </button>
           <button
-            onClick={() => setAdding(boardKey)}
+            onClick={() => startAdding(boardKey)}
             className="text-ink-3 hover:text-ink-1 text-xs"
             title="New board in folder"
           >
@@ -763,6 +786,7 @@ function FolderSection({
           </button>
         </div>
       </div>
+      {!collapsed && (<>
       {adding === listKey && (
         <form onSubmit={e => { e.preventDefault(); addList(folder.id) }} className="mb-2 flex gap-1">
           <input
@@ -841,6 +865,7 @@ function FolderSection({
           onCancelRename={() => setEditing(null)}
         />
       ))}
+      </>)}
     </div>
   )
 }

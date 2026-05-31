@@ -1,3 +1,7 @@
+## 1.4.6
+
+- **Sidebar: collapsible folders** — clicking a folder row now collapses/expands it, hiding or showing its lists, notes, and boards. A ▾/▸ chevron shows the state, and which folders are collapsed is remembered across reloads (localStorage). The folder-note link, rename, context menu, and the new-list/note/board buttons still work (adding an item auto-expands a collapsed folder)
+
 ## 1.4.5
 
 - **Board: edge snapping while resizing** — the alignment guides that appear when dragging a card now also kick in while *resizing* one. As a card's dragged edge nears another card's edge or center, it snaps flush and shows the orange guide line, so cards line up cleanly when sized to match a neighbour. The final (snapped) size is what gets saved — group containers remain excluded as snap targets
