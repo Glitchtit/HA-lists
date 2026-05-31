@@ -9,10 +9,15 @@ import { createPortal } from 'react-dom'
  * Items: { label, icon?, onClick?, danger?, disabled?, separator?, children?, hint? }
  *   - separator: { separator: true }
  *   - children: nested item array → rendered as a submenu (hover or ▸ click)
+ *
+ * Only one submenu is open at a time per menu level: hovering any row sets this
+ * menu's `openIndex`, so moving to a sibling closes the previous submenu instead
+ * of leaving it stranded behind the new one.
  */
 export default function ContextMenu({ open, x, y, items, onClose, onLeave, _depth = 0 }) {
   const ref = useRef(null)
   const [pos, setPos] = useState({ x, y })
+  const [openIndex, setOpenIndex] = useState(null)
 
   useLayoutEffect(() => {
     if (!open || !ref.current) return
@@ -23,6 +28,9 @@ export default function ContextMenu({ open, x, y, items, onClose, onLeave, _dept
     if (ny + rect.height > window.innerHeight - 4) ny = Math.max(4, window.innerHeight - rect.height - 4)
     setPos({ x: nx, y: ny })
   }, [open, x, y, items])
+
+  // Drop any open submenu whenever this menu closes/reopens.
+  useEffect(() => { if (!open) setOpenIndex(null) }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -53,20 +61,32 @@ export default function ContextMenu({ open, x, y, items, onClose, onLeave, _dept
       style={{ left: pos.x, top: pos.y }}
       onContextMenu={(e) => e.preventDefault()}
       onMouseLeave={(e) => {
-        // When mouse leaves this menu to a non-CM target, notify parent so it can hide us
-        if (!e.relatedTarget?.closest?.('[data-ctx-menu]')) onLeave?.()
+        // Leaving to a non-context-menu target (e.g. dragging away): collapse any
+        // open submenu and notify our parent so it can hide us. Moving into our
+        // own submenu keeps relatedTarget inside a [data-ctx-menu], so we skip.
+        if (!e.relatedTarget?.closest?.('[data-ctx-menu]')) {
+          setOpenIndex(null)
+          onLeave?.()
+        }
       }}
     >
       {items.map((it, i) => (
-        <MenuItem key={i} item={it} onClose={onClose} />
+        <MenuItem
+          key={i}
+          item={it}
+          index={i}
+          isOpen={openIndex === i}
+          onHover={setOpenIndex}
+          onClose={onClose}
+          _depth={_depth}
+        />
       ))}
     </div>,
     document.body,
   )
 }
 
-function MenuItem({ item, onClose }) {
-  const [hover, setHover] = useState(false)
+function MenuItem({ item, index, isOpen, onHover, onClose, _depth = 0 }) {
   const rowRef = useRef(null)
   const [subPos, setSubPos] = useState({ x: 0, y: 0 })
 
@@ -84,16 +104,14 @@ function MenuItem({ item, onClose }) {
   }
 
   function enter() {
-    if (!hasChildren || item.disabled) return
-    const rect = rowRef.current?.getBoundingClientRect()
-    if (rect) setSubPos({ x: rect.right - 2, y: rect.top })
-    setHover(true)
-  }
-
-  function leave(e) {
-    // If mouse moves to any context menu element (e.g. our submenu portal), keep hover
-    if (e.relatedTarget?.closest?.('[data-ctx-menu]')) return
-    setHover(false)
+    if (hasChildren && !item.disabled) {
+      const rect = rowRef.current?.getBoundingClientRect()
+      if (rect) setSubPos({ x: rect.right - 2, y: rect.top })
+      onHover(index)
+    } else {
+      // Hovering a leaf (or disabled) row closes any sibling submenu.
+      onHover(null)
+    }
   }
 
   return (
@@ -102,9 +120,8 @@ function MenuItem({ item, onClose }) {
       role="menuitem"
       aria-disabled={item.disabled || undefined}
       aria-haspopup={hasChildren || undefined}
-      aria-expanded={hasChildren ? hover : undefined}
+      aria-expanded={hasChildren ? isOpen : undefined}
       onMouseEnter={enter}
-      onMouseLeave={leave}
       onClick={click}
       className={[
         'relative flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none',
@@ -116,18 +133,17 @@ function MenuItem({ item, onClose }) {
       <span className="flex-1 truncate">{item.label}</span>
       {item.hint && <span className="text-xs text-ink-4 ml-2">{item.hint}</span>}
       {hasChildren && <span className="text-ink-4 ml-1">▸</span>}
-      {hasChildren && hover && (
+      {hasChildren && isOpen && (
         <ContextMenu
           open
           x={subPos.x}
           y={subPos.y}
           items={item.children}
           onClose={onClose}
-          onLeave={() => setHover(false)}
-          _depth={1}
+          onLeave={() => onHover(null)}
+          _depth={_depth + 1}
         />
       )}
     </div>
   )
 }
-

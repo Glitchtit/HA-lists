@@ -1,3 +1,7 @@
+## 1.4.7
+
+- **Fix stranded context-menu submenus** — opening a submenu (e.g. "Move to folder") and then sliding the cursor to another submenu item ("Change icon") left the first submenu floating behind the second. Each menu now tracks a single open submenu, so hovering a sibling row switches submenus (and hovering a plain row or dragging off the menu closes it) instead of stacking them
+
 ## 1.4.6
 
 - **Sidebar: collapsible folders** — clicking a folder row now collapses/expands it, hiding or showing its lists, notes, and boards. A ▾/▸ chevron shows the state, and which folders are collapsed is remembered across reloads (localStorage). The folder-note link, rename, context menu, and the new-list/note/board buttons still work (adding an item auto-expands a collapsed folder)
