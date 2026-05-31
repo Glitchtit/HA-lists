@@ -8,6 +8,25 @@ const ICON_CHOICES = ['📁', '📋', '📝', '🛒', '🏠', '💼', '🎯', '�
 const NOTE_ICON_CHOICES = ['📝', '📓', '📒', '📕', '📗', '📘', '📙', '🗒️', '📄', '🧠', '💡', '⭐']
 const BOARD_ICON_CHOICES = ['🧩', '🗺️', '🧠', '🪐', '🧭', '🎛️', '📐', '🗂️', '🔗', '✨', '🌌', '🧱']
 
+// Build a "Change icon" submenu: the preset choices plus a Custom… row that
+// prompts for any emoji or symbol. `apply(icon)` persists the chosen glyph.
+function buildIconChildren(choices, apply) {
+  return [
+    ...choices.map(ic => ({ label: ic, onClick: () => apply(ic) })),
+    { separator: true },
+    {
+      label: 'Custom…', icon: '⌨️',
+      onClick: () => {
+        // eslint-disable-next-line no-alert
+        const v = window.prompt('Enter an emoji or symbol to use as the icon')
+        if (v == null) return
+        const icon = v.trim().slice(0, 8)
+        if (icon) apply(icon)
+      },
+    },
+  ]
+}
+
 export default function Sidebar({ folders, lists, notes = [], boards = [], activeEntity, onSelect, onRefresh, onOpenDailyNote, onOpenRandomNote, onOpenTemplatePicker, onOpenWorkspaces, onOpenCustomCSS, onOpenStats, onOpenCalendar, recent = [] }) {
   const [newListName, setNewListName] = useState('')
   const [newFolderName, setNewFolderName] = useState('')
@@ -185,9 +204,7 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
     { label: 'New board in folder', icon: '🗂️', onClick: () => setAdding(`board-folder-${menuFolder.id}`) },
     {
       label: 'Change icon', icon: '🎨',
-      children: ICON_CHOICES.map(ic => ({
-        label: ic, onClick: async () => { await api.updateFolder(menuFolder.id, { icon: ic }); onRefresh() },
-      })),
+      children: buildIconChildren(ICON_CHOICES, async (ic) => { await api.updateFolder(menuFolder.id, { icon: ic }); onRefresh() }),
     },
     {
       label: menuFolder.folder_note_id ? 'Change folder note' : 'Set folder note', icon: '📄',
@@ -255,9 +272,7 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
     },
     {
       label: 'Change icon', icon: '🎨',
-      children: ICON_CHOICES.map(ic => ({
-        label: ic, onClick: async () => { await api.updateList(menuList.id, { icon: ic }); onRefresh() },
-      })),
+      children: buildIconChildren(ICON_CHOICES, async (ic) => { await api.updateList(menuList.id, { icon: ic }); onRefresh() }),
     },
     {
       label: menuList.archived ? 'Unarchive' : 'Archive', icon: '🗄️',
@@ -297,9 +312,7 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
     },
     {
       label: 'Change icon', icon: '🎨',
-      children: NOTE_ICON_CHOICES.map(ic => ({
-        label: ic, onClick: async () => { await api.updateNote(menuNote.id, { icon: ic }); onRefresh() },
-      })),
+      children: buildIconChildren(NOTE_ICON_CHOICES, async (ic) => { await api.updateNote(menuNote.id, { icon: ic }); onRefresh() }),
     },
     {
       label: menuNote.pinned ? 'Unpin' : 'Pin', icon: '📌',
@@ -343,9 +356,7 @@ export default function Sidebar({ folders, lists, notes = [], boards = [], activ
     },
     {
       label: 'Change icon', icon: '🎨',
-      children: BOARD_ICON_CHOICES.map(ic => ({
-        label: ic, onClick: async () => { await api.updateBoard(menuBoard.id, { icon: ic }); onRefresh() },
-      })),
+      children: buildIconChildren(BOARD_ICON_CHOICES, async (ic) => { await api.updateBoard(menuBoard.id, { icon: ic }); onRefresh() }),
     },
     {
       label: menuBoard.pinned ? 'Unpin' : 'Pin', icon: '📌',

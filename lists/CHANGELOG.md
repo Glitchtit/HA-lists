@@ -1,3 +1,7 @@
+## 1.4.8
+
+- **Custom icons** — the "Change icon" submenu (folders, lists, notes, boards) now ends with a **Custom…** entry that prompts for any emoji or symbol, so you're no longer limited to the preset palette
+
 ## 1.4.7
 
 - **Fix stranded context-menu submenus** — opening a submenu (e.g. "Move to folder") and then sliding the cursor to another submenu item ("Change icon") left the first submenu floating behind the second. Each menu now tracks a single open submenu, so hovering a sibling row switches submenus (and hovering a plain row or dragging off the menu closes it) instead of stacking them
