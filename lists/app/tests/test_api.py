@@ -945,6 +945,26 @@ class TestBoards:
         ).fetchone()["c"]
         assert nc == 0 and ec == 0
 
+    def test_card_resize_locks_auto_height(self, client):
+        # New cards auto-size (auto_height defaults true); resizing locks them.
+        bid = client.post("/api/boards/", json={"name": "B"}).json()["id"]
+        card = client.post(
+            f"/api/boards/{bid}/nodes", json={"kind": "card", "title": "A"}
+        ).json()
+        assert card["auto_height"] is True
+        r = client.patch(
+            f"/api/boards/{bid}/nodes/{card['id']}",
+            json={"width": 320, "height": 200, "auto_height": False},
+        )
+        assert r.status_code == 200
+        patched = r.json()
+        assert patched["auto_height"] is False
+        assert patched["width"] == 320 and patched["height"] == 200
+        # Persists across a reload of the board.
+        reloaded = client.get(f"/api/boards/{bid}").json()
+        node = next(n for n in reloaded["nodes"] if n["id"] == card["id"])
+        assert node["auto_height"] is False and node["height"] == 200
+
     def test_folder_delete_detaches_boards(self, client):
         fid = client.post("/api/folders/", json={"name": "F"}).json()["id"]
         bid = client.post(

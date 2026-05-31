@@ -342,6 +342,7 @@ class BoardNodeUpdate(BaseModel):
     y: float | None = None
     width: float | None = None
     height: float | None = None
+    auto_height: bool | None = None
     z: int | None = None
     media_alt: str | None = None
     parent_group_id: int | None = None
@@ -364,6 +365,7 @@ class BoardNode(BaseModel):
     y: float
     width: float
     height: float
+    auto_height: bool = True
     z: int
     media_filename: str | None = None
     media_mime: str | None = None

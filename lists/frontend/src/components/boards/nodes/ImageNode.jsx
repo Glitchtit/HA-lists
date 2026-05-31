@@ -1,4 +1,5 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Handle, Position } from 'reactflow';
 import { attachmentUrl } from '../../../api';
 
@@ -10,6 +11,16 @@ function ImageNode({ data, selected }) {
   const src = data?.board_id && data?.media_filename
     ? attachmentUrl(data.board_id, data.media_filename)
     : null;
+
+  // Close the lightbox on Escape while it's open.
+  useEffect(() => {
+    if (!lightbox) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); setLightbox(false); } };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [lightbox]);
+
+  const caption = data?.media_alt || data?.title || '';
 
   const commitAlt = () => {
     setEditingAlt(false);
@@ -31,7 +42,7 @@ function ImageNode({ data, selected }) {
               src={src}
               alt={data?.media_alt || ''}
               className="bn-image-thumb nodrag"
-              onDoubleClick={() => setLightbox(true)}
+              onDoubleClick={(e) => { e.stopPropagation(); setLightbox(true); }}
               draggable={false}
             />
           ) : (
@@ -65,14 +76,26 @@ function ImageNode({ data, selected }) {
         </div>
         <Handle type="source" position={Position.Bottom} />
       </div>
-      {lightbox && src && (
+      {lightbox && src && createPortal(
         <div
           className="bn-lightbox"
+          role="dialog"
+          aria-modal="true"
           onClick={() => setLightbox(false)}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <img src={src} alt={data?.media_alt || ''} />
-        </div>
+          <button
+            type="button"
+            className="bn-lightbox-close"
+            title="Close (Esc)"
+            onClick={(e) => { e.stopPropagation(); setLightbox(false); }}
+          >✕</button>
+          <figure className="bn-lightbox-figure" onClick={(e) => e.stopPropagation()}>
+            <img src={src} alt={caption} draggable={false} />
+            {caption && <figcaption>{caption}</figcaption>}
+          </figure>
+        </div>,
+        document.body,
       )}
     </>
   );

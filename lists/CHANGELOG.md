@@ -1,3 +1,11 @@
+## 1.4.3
+
+- **Board: fullscreen image viewer** — double-clicking an image node now opens a Google-Photos-style lightbox: the image is centered large on a dimmed, blurred backdrop with its caption underneath. Close with the ✕ button, Escape, or by clicking the backdrop. The viewer is portaled to the page body so it covers the whole screen instead of being trapped (and scaled) inside the zoomable board canvas, which is why the previous inline version never showed full-size
+
+## 1.4.2
+
+- **Board: resizable cards** — cards now show resize handles when selected (drag any edge or corner). Cards still auto-grow with their text by default, but once you resize one it locks to that size and stops auto-extending — the body scrolls inside instead. Backed by a new `auto_height` flag on board nodes (defaults on; flips off on first resize) so existing cards keep auto-sizing until you resize them
+
 ## 1.4.1
 
 - **Board: snap-align cards while dragging** — dragging a card near another node now snaps it into alignment when an edge or center comes within ~6px, and a thin International Orange guide line shows where they line up (Figma/Miro feel). Snapping covers left/right/top/bottom edges plus horizontal and vertical centers; group containers are excluded as targets so cards inside a group don't magnet to its inner edges. The guide clears on drop and the snapped position persists through the existing autosave

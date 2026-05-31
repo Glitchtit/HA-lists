@@ -141,6 +141,7 @@ def _migrate_board_nodes(conn: sqlite3.Connection) -> None:
                 y               REAL    NOT NULL DEFAULT 0,
                 width           REAL    NOT NULL DEFAULT 240,
                 height          REAL    NOT NULL DEFAULT 160,
+                auto_height     INTEGER NOT NULL DEFAULT 1,
                 z               INTEGER DEFAULT 0,
                 media_filename  TEXT,
                 media_mime      TEXT,
@@ -169,6 +170,17 @@ def _migrate_board_nodes(conn: sqlite3.Connection) -> None:
             """
         )
         conn.execute("PRAGMA foreign_keys = ON")
+
+    # v1.4.2: per-card manual resize flag. Cards default to auto-growing with
+    # their text (auto_height = 1); once a user resizes a card we lock it
+    # (auto_height = 0) so it keeps the chosen size instead of auto-extending.
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(board_nodes)").fetchall()}
+    if "auto_height" not in cols:
+        logger.info("Migrating board_nodes: add auto_height column")
+        conn.execute(
+            "ALTER TABLE board_nodes ADD COLUMN auto_height INTEGER NOT NULL DEFAULT 1"
+        )
+        conn.commit()
 
 
 def _migrate_search_index(conn: sqlite3.Connection) -> None:
@@ -409,6 +421,7 @@ CREATE TABLE IF NOT EXISTS board_nodes (
     y               REAL    NOT NULL DEFAULT 0,
     width           REAL    NOT NULL DEFAULT 240,
     height          REAL    NOT NULL DEFAULT 160,
+    auto_height     INTEGER NOT NULL DEFAULT 1,
     z               INTEGER DEFAULT 0,
     media_filename  TEXT,
     media_mime      TEXT,

@@ -209,8 +209,25 @@
 
 .bn-card {
   background: var(--bg-3);
-  min-width: 220px;
-  max-width: 300px;
+  /* Width & height follow the ReactFlow node wrapper. When the wrapper has no
+     explicit height (auto card) the card grows with its text; when the user
+     resizes it the wrapper is sized and the card fills it, scrolling the body. */
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  /* Let the NodeResizer handles sit on the border without being clipped
+     (the `.bn` base sets overflow:hidden). Inner elements are inset, so the
+     rounded corners stay clean. */
+  overflow: visible;
+}
+.bn-card .bn-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 .bn-card input.bn-card-title {
   flex: 1;
@@ -230,15 +247,17 @@
 }
 .bn-card textarea.bn-card-body {
   width: 100%;
+  flex: 1 1 auto;
   min-height: 80px;
-  max-height: 240px;
   background: var(--bg-1);
   color: var(--fg-1);
   border: 1px solid var(--line-1);
   border-radius: var(--r-sm);
   padding: 6px 8px;
   font: inherit;
-  resize: vertical;
+  /* Size is driven by the card (auto-grows, or fills a resized card); no
+     separate textarea resize handle. */
+  resize: none;
   outline: none;
 }
 .bn-card textarea.bn-card-body:focus { border-color: var(--brand-cobalt-400); }
@@ -499,23 +518,68 @@
   font-size: var(--fs-xs);
 }
 
+/* Google-Photos-style fullscreen image viewer. Portaled to <body> so it
+   escapes the ReactFlow viewport transform and truly covers the screen. */
 .bn-lightbox {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: 1000;
   cursor: zoom-out;
-  padding: 24px;
+  padding: 40px;
+  animation: bn-lightbox-fade 120ms ease;
 }
-.bn-lightbox img {
+@keyframes bn-lightbox-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.bn-lightbox-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   max-width: 100%;
   max-height: 100%;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
-  border-radius: var(--r-md);
+  cursor: default;
 }
+.bn-lightbox-figure img {
+  max-width: 92vw;
+  max-height: 86vh;
+  object-fit: contain;
+  border-radius: var(--r-md);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+.bn-lightbox-figure figcaption {
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+  max-width: 92vw;
+  word-break: break-word;
+}
+.bn-lightbox-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg-1);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease;
+}
+.bn-lightbox-close:hover { background: rgba(255, 255, 255, 0.22); }
 
 /* ── Group node ─────────────────────────────────────────── */
 .bn-group {

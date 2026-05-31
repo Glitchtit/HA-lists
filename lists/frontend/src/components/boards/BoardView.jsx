@@ -65,15 +65,19 @@ function isEditableFocused() {
 function toFlowNode(bn, handlers) {
   const isGroup = bn.kind === 'group';
   const isCard  = bn.kind === 'card';
+  // Cards auto-size to content until the user resizes one; a resized card has
+  // auto_height=false and locks to its stored width/height (no auto-extend).
+  const cardFixed = isCard && bn.auto_height === false;
   return {
     id: String(bn.id),
     type: bn.kind,
     position: { x: Number(bn.x ?? 0), y: Number(bn.y ?? 0) },
     width: bn.width || undefined,
-    // Cards auto-size to content; don't lock in a stored height.
-    height: isCard ? undefined : (bn.height || undefined),
+    height: isCard
+      ? (cardFixed ? (bn.height || undefined) : undefined)
+      : (bn.height || undefined),
     zIndex: isGroup ? -10 : 0,
-    style: isGroup && bn.width && bn.height
+    style: (isGroup || cardFixed) && bn.width && bn.height
       ? { width: bn.width, height: bn.height }
       : undefined,
     data: { ...bn, ...handlers },

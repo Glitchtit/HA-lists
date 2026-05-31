@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, NodeResizer } from 'reactflow';
 import NotePreview from '../../notes/NotePreview';
 
 const PRESET_COLORS = [
@@ -62,6 +62,7 @@ function CardNode({ data, selected, id }) {
   const color = data?.color;
   const dotColor = color || 'var(--fg-4)';
   const light = isLightColor(color);
+  const fixed = data?.auto_height === false; // user-resized → locked size, no auto-extend
 
   const save = (patch) => {
     if (data?.onUpdate) data.onUpdate(patch);
@@ -104,10 +105,17 @@ function CardNode({ data, selected, id }) {
         background: tintForColor(color) || 'var(--bg-3)',
         borderLeftColor: color || 'var(--brand-cobalt)',
         position: 'relative',
-        minHeight: light ? (data?.width || 200) : undefined,
+        minHeight: (!fixed && light) ? (data?.width || 200) : undefined,
       }}
       onClick={(e) => e.stopPropagation()}
     >
+      <NodeResizer
+        color="var(--brand-cobalt)"
+        isVisible={selected}
+        minWidth={160}
+        minHeight={90}
+        onResizeEnd={(_e, size) => save({ width: size.width, height: size.height, auto_height: false })}
+      />
       <Handle type="target" position={Position.Top} />
       <div className="bn-header">
         <span className="bn-header-icon">📌</span>
