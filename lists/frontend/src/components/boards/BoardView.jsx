@@ -34,6 +34,8 @@ import BoardPortalNode from './nodes/BoardPortalNode';
 import NodeToolbar from './NodeToolbar';
 import BacklinksDrawer from './BacklinksDrawer';
 import TemplatePicker from './TemplatePicker';
+import HelperLines from './HelperLines';
+import { getHelperLines } from './helperLines';
 import './boards.css';
 
 const NODE_TYPES = {
@@ -97,6 +99,8 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   const [ctxMenu, setCtxMenu] = useState(null); // {type:'node'|'edge', x, y, target}
   const [backlinksOpen, setBacklinksOpen] = useState(false);
   const [templatePicker, setTemplatePicker] = useState(null); // {x,y,flow:{x,y}} | null
+  const [helperLineH, setHelperLineH] = useState(undefined); // alignment guide (flow y)
+  const [helperLineV, setHelperLineV] = useState(undefined); // alignment guide (flow x)
   const cursorRef = useRef({ clientX: null, clientY: null });
 
   const rf = useReactFlow();
@@ -222,6 +226,23 @@ function BoardCanvas({ boardId, onOpenEntity }) {
 
   // ─ ReactFlow change handlers ─────────────────────────────
   const onNodesChange = useCallback((changes) => {
+    // Clear any guide line from the previous drag tick; recompute below.
+    setHelperLineH(undefined);
+    setHelperLineV(undefined);
+    // Snap a single dragged (non-group) node to nearby node edges/centers.
+    if (changes.length === 1
+        && changes[0].type === 'position'
+        && changes[0].dragging
+        && changes[0].position) {
+      const dragged = nodes.find((n) => n.id === changes[0].id);
+      if (dragged && dragged.data?.kind !== 'group') {
+        const helpers = getHelperLines(changes[0], nodes);
+        changes[0].position.x = helpers.snapPosition.x ?? changes[0].position.x;
+        changes[0].position.y = helpers.snapPosition.y ?? changes[0].position.y;
+        setHelperLineV(helpers.vertical);
+        setHelperLineH(helpers.horizontal);
+      }
+    }
     setNodes((ns) => applyNodeChanges(changes, ns));
     for (const ch of changes) {
       if (ch.type === 'position' && ch.position && !ch.dragging) {
@@ -234,7 +255,7 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         schedulePositionFlush();
       }
     }
-  }, [schedulePositionFlush]);
+  }, [schedulePositionFlush, nodes]);
 
   const onEdgesChange = useCallback((changes) => {
     setEdges((es) => applyEdgeChanges(changes, es));
@@ -291,6 +312,8 @@ function BoardCanvas({ boardId, onOpenEntity }) {
   }, [nodes]);
 
   const onNodeDragStop = useCallback((_e, node) => {
+    setHelperLineH(undefined);
+    setHelperLineV(undefined);
     pendingPositionsRef.current.set(node.id, node.position);
     const ref = groupDragRef.current;
     if (ref && ref.id === node.id) {
@@ -854,6 +877,7 @@ function BoardCanvas({ boardId, onOpenEntity }) {
         proOptions={{ hideAttribution: true }}
       >
         <Background color="var(--line-2)" gap={16} />
+        <HelperLines horizontal={helperLineH} vertical={helperLineV} />
         <Controls />
         <MiniMap
           nodeColor={(n) => n.data?.color || 'var(--brand-cobalt)'}

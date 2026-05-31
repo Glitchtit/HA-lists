@@ -1,3 +1,7 @@
+## 1.4.1
+
+- **Board: snap-align cards while dragging** — dragging a card near another node now snaps it into alignment when an edge or center comes within ~6px, and a thin International Orange guide line shows where they line up (Figma/Miro feel). Snapping covers left/right/top/bottom edges plus horizontal and vertical centers; group containers are excluded as targets so cards inside a group don't magnet to its inner edges. The guide clears on drop and the snapped position persists through the existing autosave
+
 ## 1.4.0
 
 - **Agent service layer** — the Lists integration now exposes Home Assistant services so a voice/LLM agent can drive the add-on: `ha_lists.create_list`, `ha_lists.add_item` (resolves the list by name), `ha_lists.breakdown_item` and `ha_lists.compile_braindump` (run the async AI jobs and return the resulting subtasks/items), and `ha_lists.find_lists` (name→id lookup). The three read/AI services return structured responses; breakdown/compile poll the AI job to completion (bounded ~45 s, returning a timeout marker otherwise)
