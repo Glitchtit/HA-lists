@@ -1,3 +1,7 @@
+## 1.4.4
+
+- **Board: fix grey box around groups** — group nodes reuse ReactFlow's reserved `group` type, which ships a default grey border + tinted background + padding that showed as a square grey frame outside the group's own dashed border. Neutralised that built-in wrapper styling so only the group's intended border and selection ring render
+
 ## 1.4.3
 
 - **Board: fullscreen image viewer** — double-clicking an image node now opens a Google-Photos-style lightbox: the image is centered large on a dimmed, blurred backdrop with its caption underneath. Close with the ✕ button, Escape, or by clicking the backdrop. The viewer is portaled to the page body so it covers the whole screen instead of being trapped (and scaled) inside the zoomable board canvas, which is why the previous inline version never showed full-size
