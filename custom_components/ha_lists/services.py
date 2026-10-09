@@ -23,6 +23,7 @@ import httpx
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.helpers import config_validation as cv
+from homeassistant.util.ssl import get_default_context
 
 from .const import DOMAIN
 from .coordinator import ListsCoordinator
@@ -168,14 +169,14 @@ def _coordinators(hass: HomeAssistant) -> list[ListsCoordinator]:
 
 
 async def _get_json(coord: ListsCoordinator, path: str, params: dict | None = None) -> Any:
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
         resp = await client.get(f"{coord.addon_url}{path}", params=params or {})
         resp.raise_for_status()
         return resp.json()
 
 
 async def _post_json(coord: ListsCoordinator, path: str, payload: dict) -> Any:
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
         resp = await client.post(f"{coord.addon_url}{path}", json=payload)
         resp.raise_for_status()
         return resp.json()

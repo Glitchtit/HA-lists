@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util.ssl import get_default_context
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=1)
@@ -35,7 +36,7 @@ class ListsCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict:
         try:
-            async with httpx.AsyncClient(timeout=15) as client:
+            async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
                 results = await asyncio.gather(
                     client.get(f"{self.addon_url}/api/health"),
                     client.get(f"{self.addon_url}/api/persons/"),

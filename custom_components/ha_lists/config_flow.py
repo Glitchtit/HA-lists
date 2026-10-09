@@ -7,6 +7,7 @@ import voluptuous as vol
 import httpx
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.util.ssl import get_default_context
 
 from .const import DOMAIN, CONF_ADDON_URL, DEFAULT_ADDON_URL, ADDON_SLUG
 
@@ -19,7 +20,7 @@ async def _discover_addon_url() -> str | None:
     if not token:
         return None
     try:
-        async with httpx.AsyncClient(timeout=5) as client:
+        async with httpx.AsyncClient(verify=get_default_context(), timeout=5) as client:
             resp = await client.get(
                 f"http://supervisor/addons/{ADDON_SLUG}/info",
                 headers={"Authorization": f"Bearer {token}"},
@@ -37,7 +38,7 @@ async def _discover_addon_url() -> str | None:
 async def _test_connection(url: str) -> bool:
     """Return True if the add-on health endpoint responds OK."""
     try:
-        async with httpx.AsyncClient(timeout=5) as client:
+        async with httpx.AsyncClient(verify=get_default_context(), timeout=5) as client:
             resp = await client.get(f"{url.rstrip('/')}/api/health")
             return resp.status_code == 200
     except Exception:

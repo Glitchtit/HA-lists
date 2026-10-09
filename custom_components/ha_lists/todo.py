@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util.ssl import get_default_context
 
 from .const import DOMAIN
 from .coordinator import ListsCoordinator
@@ -78,7 +79,7 @@ class _BaseListsTodo(CoordinatorEntity, TodoListEntity):
         endpoint = "complete" if item.status == TodoItemStatus.COMPLETED else "reopen"
         url = f"{self.coordinator.addon_url}/api/items/{item.uid}/{endpoint}"
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(verify=get_default_context(), timeout=10) as client:
                 await client.post(url)
             await self.coordinator.async_request_refresh()
         except Exception as exc:
@@ -87,7 +88,7 @@ class _BaseListsTodo(CoordinatorEntity, TodoListEntity):
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete items when removed from the HA todo list."""
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(verify=get_default_context(), timeout=10) as client:
                 for uid in uids:
                     await client.delete(f"{self.coordinator.addon_url}/api/items/{uid}")
             await self.coordinator.async_request_refresh()

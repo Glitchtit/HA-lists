@@ -1,3 +1,7 @@
+## 1.4.9
+
+- Integration 0.9.1: no more "Detected blocking call to load_verify_locations" warnings at Home Assistant startup. HTTP clients now reuse Home Assistant's pre-built SSL context instead of loading the certificate bundle inside the event loop
+
 ## 1.4.8
 
 - **Custom icons** — the "Change icon" submenu (folders, lists, notes, boards) now ends with a **Custom…** entry that prompts for any emoji or symbol, so you're no longer limited to the preset palette
