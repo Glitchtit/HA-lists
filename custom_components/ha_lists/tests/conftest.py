@@ -67,6 +67,7 @@ for _mod_name, _mod in [
     ("homeassistant.components", _ha_components),
     ("homeassistant.helpers", _ha_helpers_pkg),
     ("homeassistant.helpers.config_validation", _ha_cv),
+    ("homeassistant.config_entries", _stub("homeassistant.config_entries", ConfigEntry=object)),
     ("homeassistant.util", _stub("homeassistant.util")),
     ("homeassistant.util.ssl", _stub("homeassistant.util.ssl", get_default_context=lambda: None)),
 ]:

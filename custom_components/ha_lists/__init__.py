@@ -6,7 +6,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, CONF_ADDON_URL, PANEL_TITLE, PANEL_ICON, PANEL_URL
+from .const import DOMAIN, CONF_ADDON_URL
 from .coordinator import ListsCoordinator
 from .services import async_register_services, async_unregister_services
 
@@ -28,20 +28,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
-
-    if not hass.data[DOMAIN].get("panel_registered"):
-        try:
-            hass.components.frontend.async_register_built_in_panel(
-                "iframe",
-                PANEL_TITLE,
-                PANEL_ICON,
-                PANEL_URL,
-                {"url": addon_url},
-                require_admin=False,
-            )
-            hass.data[DOMAIN]["panel_registered"] = True
-        except Exception as exc:
-            _LOGGER.warning("Could not register panel: %s", exc)
+    # No sidebar panel of our own: the Lists add-on's ingress panel is the UI.
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_register_services(hass)
