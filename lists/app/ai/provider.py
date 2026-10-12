@@ -35,7 +35,9 @@ def _call_gemini(prompt: str, api_key: str, model: str) -> tuple[str, dict]:
         "generationConfig": {"response_mime_type": "application/json"},
     }
     with httpx.Client(timeout=_PROVIDER_TIMEOUT) as client:
-        resp = client.post(url, json=payload, params={"key": api_key})
+        # The key goes in a header: in the URL, any request error would print
+        # it into the add-on log.
+        resp = client.post(url, json=payload, headers={"x-goog-api-key": api_key})
     if resp.status_code in (401, 403):
         storage_client.invalidate_cache()
     resp.raise_for_status()

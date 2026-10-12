@@ -1,3 +1,7 @@
+## 1.4.11
+
+- The Gemini API key is sent in a request header instead of the URL, so a failed AI call no longer writes the key into the add-on log
+
 ## 1.4.10
 
 - Integration 0.9.2: no more "Could not register panel" warning at Home Assistant startup. The integration no longer tries to add a sidebar panel of its own; the add-on's own "Lists" sidebar entry is the UI
