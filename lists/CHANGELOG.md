@@ -1,3 +1,8 @@
+## 1.4.12
+
+- New icon and logo in the add-on store, part of one matching set across all GlitchyRee apps
+- Integration 0.9.3: its own icon and logo on the Integrations page (Home Assistant 2026.3 or newer)
+
 ## 1.4.11
 
 - The Gemini API key is sent in a request header instead of the URL, so a failed AI call no longer writes the key into the add-on log
