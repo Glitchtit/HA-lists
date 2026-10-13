@@ -58,7 +58,7 @@
 The integration polls the add-on every minute and creates:
 
 - **Sensors** — `Lists Open` and `Lists Overdue` item counts, plus an open-item count per person
-- **To-do lists** — one per list and one per person, showing open items
+- **To-do lists** — one per list and one per person, showing open items. Check items off, rename them, set notes and due dates, or delete them from Home Assistant; items added to a list's to-do land in that list
 - **Calendar** — `Lists`, with every open item that has a due date
 
 | Action | What it does |

@@ -1,3 +1,8 @@
+## 1.4.13
+
+- Integration 0.9.5: the Lists to-do lists in Home Assistant are editable. Check items off, rename them, change notes and due dates, delete them, and add new items to a list's to-do
+- Integration 0.9.5: setup finds the add-on by itself again; the fallback address was misspelled (`a0a9ed235-ha-lists`) and discovery asked the Supervisor for the wrong add-on name
+
 ## 1.4.12
 
 - New icon and logo in the add-on store, part of one matching set across all GlitchyRee apps
