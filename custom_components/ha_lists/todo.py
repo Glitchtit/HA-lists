@@ -138,14 +138,14 @@ class _BaseListsTodo(CoordinatorEntity, TodoListEntity):
             if item.status is not None and now_done != was_done:
                 endpoint = "complete" if now_done else "reopen"
                 (await client.post(f"{base}/{endpoint}")).raise_for_status()
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete items when removed from the HA todo list."""
         async with httpx.AsyncClient(verify=get_default_context(), timeout=10) as client:
             for uid in uids:
                 (await client.delete(f"{self.coordinator.addon_url}/api/items/{uid}")).raise_for_status()
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()
 
 
 class ListsListTodo(_BaseListsTodo):
@@ -173,7 +173,7 @@ class ListsListTodo(_BaseListsTodo):
         }
         async with httpx.AsyncClient(verify=get_default_context(), timeout=10) as client:
             (await client.post(f"{self.coordinator.addon_url}/api/items/", json=body)).raise_for_status()
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()
 
 
 class ListsPersonTodo(_BaseListsTodo):

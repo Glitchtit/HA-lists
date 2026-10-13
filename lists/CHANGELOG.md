@@ -1,3 +1,7 @@
+## 1.4.14
+
+- Integration 0.9.6: changes made from a Home Assistant to-do list show up right away instead of up to 10 seconds later, and a just-added item can be removed immediately
+
 ## 1.4.13
 
 - Integration 0.9.5: the Lists to-do lists in Home Assistant are editable. Check items off, rename them, change notes and due dates, delete them, and add new items to a list's to-do
