@@ -71,6 +71,16 @@ def _call_ollama(prompt: str, url: str, model: str) -> tuple[str, dict]:
     }
 
 
+def _claude_response_text(response) -> str:
+    """Join the text blocks of a Claude response.
+
+    Newer models think by default, so content[0] may be a thinking block.
+    """
+    if response.stop_reason == "max_tokens":
+        logger.warning("Claude response hit max_tokens; output may be truncated")
+    return "".join(b.text for b in response.content if b.type == "text")
+
+
 def _call_claude(prompt: str, api_key: str, model: str) -> tuple[str, dict]:
     if not api_key:
         raise RuntimeError("Claude API key not configured (set ai_claude_api_key in add-on options)")
@@ -83,11 +93,11 @@ def _call_claude(prompt: str, api_key: str, model: str) -> tuple[str, dict]:
     client = _anthropic.Anthropic(api_key=api_key)
     response = client.messages.create(
         model=model or "claude-3-5-haiku-20241022",
-        max_tokens=8192,
+        max_tokens=16000,
         messages=[{"role": "user", "content": prompt}],
     )
     usage = response.usage
-    return response.content[0].text, {"in": usage.input_tokens, "out": usage.output_tokens}
+    return _claude_response_text(response), {"in": usage.input_tokens, "out": usage.output_tokens}
 
 
 # ── JSON extraction + retry wrapper ─────────────────────────────────────────

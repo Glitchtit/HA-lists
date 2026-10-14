@@ -1,3 +1,7 @@
+## 1.4.15
+
+- AI features work with newer Claude models (5.x), which think before answering: the answer text is read past the thinking block, and there is more output room so thinking doesn't cut the answer short
+
 ## 1.4.14
 
 - Integration 0.9.6: changes made from a Home Assistant to-do list show up right away instead of up to 10 seconds later, and a just-added item can be removed immediately
