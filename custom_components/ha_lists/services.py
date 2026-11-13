@@ -22,6 +22,7 @@ from typing import Any, Awaitable, Callable
 import httpx
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util.ssl import get_default_context
 
@@ -194,13 +195,14 @@ def async_register_services(hass: HomeAssistant) -> None:
     if hass.services.has_service(DOMAIN, SERVICE_CREATE_LIST):
         return
 
-    async def handle_create_list(call: ServiceCall) -> None:
+    async def handle_create_list(call: ServiceCall) -> dict:
         payload = {k: v for k, v in call.data.items() if v is not None}
         for coord in _coordinators(hass):
             await _post_json(coord, "/api/lists/", payload)
             await coord.async_request_refresh()
+        return {"status": "created", "name": call.data["name"]}
 
-    async def handle_add_item(call: ServiceCall) -> None:
+    async def handle_add_item(call: ServiceCall) -> dict:
         list_name = call.data["list"]
         payload = {
             k: v
@@ -209,9 +211,14 @@ def async_register_services(hass: HomeAssistant) -> None:
         }
         for coord in _coordinators(hass):
             lists = await _fetch_lists(coord)
-            payload["list_id"] = resolve_list_id(list_name, lists)
+            try:
+                payload["list_id"] = resolve_list_id(list_name, lists)
+            except ValueError as err:
+                # Only a HomeAssistantError reaches a voice assistant as text.
+                raise ServiceValidationError(str(err)) from err
             await _post_json(coord, "/api/items/", payload)
             await coord.async_request_refresh()
+        return {"status": "added", "list": list_name, "title": call.data["title"]}
 
     async def handle_breakdown(call: ServiceCall) -> dict:
         coords = _coordinators(hass)
@@ -287,11 +294,20 @@ def async_register_services(hass: HomeAssistant) -> None:
         lists = await _fetch_lists(coords[0])
         return {"lists": [{"id": l["id"], "name": l["name"]} for l in lists]}
 
+    # Both answer with what they did: an Assist tool call always asks for a response.
     hass.services.async_register(
-        DOMAIN, SERVICE_CREATE_LIST, handle_create_list, schema=_CREATE_LIST_SCHEMA
+        DOMAIN,
+        SERVICE_CREATE_LIST,
+        handle_create_list,
+        schema=_CREATE_LIST_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_ADD_ITEM, handle_add_item, schema=_ADD_ITEM_SCHEMA
+        DOMAIN,
+        SERVICE_ADD_ITEM,
+        handle_add_item,
+        schema=_ADD_ITEM_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
     hass.services.async_register(
         DOMAIN,

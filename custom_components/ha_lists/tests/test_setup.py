@@ -43,6 +43,11 @@ async def test_setup_registers_no_panel_and_logs_no_panel_warning(monkeypatch, c
     monkeypatch.setattr(integration, "ListsCoordinator", _Coordinator)
     monkeypatch.setattr(integration, "async_register_services", lambda hass: None)
 
+    async def _descriptions(hass):
+        return {}
+
+    monkeypatch.setattr(integration, "async_get_all_descriptions", _descriptions)
+
     async def _forward(entry, platforms):
         return None
 
