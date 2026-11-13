@@ -15,6 +15,14 @@ from .const import DOMAIN
 # The AI breakdown and brain-dump jobs are left out: up to 45 s is too long for a spoken reply.
 ACTIONS = ("find_lists", "add_item", "create_list")
 
+# Some agents load tools on demand (tool search): this line is how they
+# learn the tools exist.
+PROMPT = (
+    "Task lists live in Lists: ha_lists__find_lists names them,"
+    " ha_lists__add_item adds a task to one and ha_lists__create_list makes a new"
+    " list. Groceries to buy go on the Storage shopping list instead."
+)
+
 
 @callback
 def async_get_tools(
@@ -28,4 +36,4 @@ def async_get_tools(
         for action in ACTIONS
         if hass.services.has_service(DOMAIN, action)
     ]
-    return LLMTools(tools=tools) if tools else None
+    return LLMTools(tools=tools, prompt=PROMPT) if tools else None
