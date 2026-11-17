@@ -49,8 +49,8 @@
 | `debug` | `false` | Verbose backend logging |
 | `timezone` | `""` | Timezone for dates and daily notes; empty uses Home Assistant's timezone |
 | `ai_provider` | `gemini` | AI backend for breakdown, estimates, compile and note helpers: `gemini`, `claude` or `ollama` |
-| `ai_gemini_api_key` / `ai_gemini_model` | `""` / `gemini-2.0-flash` | Google Gemini API key and model |
-| `ai_claude_api_key` / `ai_claude_model` | `""` / `claude-3-5-haiku-20241022` | Anthropic API key and model |
+| `ai_gemini_api_key` / `ai_gemini_model` | `""` / `gemini-3.6-flash` | Google Gemini API key and model |
+| `ai_claude_api_key` / `ai_claude_model` | `""` / `claude-haiku-5-5` | Anthropic API key and model |
 | `ai_ollama_url` / `ai_ollama_model` | `""` / `llama3` | Base URL and model of a local Ollama server |
 
 ## 🏠 In Home Assistant

@@ -8,6 +8,7 @@ Covers:
 - /api/ai/compile appends items with incrementing sort_order
 - /api/ai/formalize returns rewritten text
 - /api/ai/jobs/{id} returns 404 for unknown
+- Breakdowns for different items run side by side; non-string subtasks are dropped
 - Storage outage → 503 degradation
 """
 
@@ -192,6 +193,63 @@ def test_breakdown_replaces_prior_ai_subtasks(client, ai_env):
     assert "new1" in titles and "new2" in titles
 
 
+def test_breakdowns_for_different_items_both_run(client, ai_env):
+    import threading
+    from ai import provider
+    lst = client.post("/api/lists/", json={"name": "P"}).json()
+    alpha = client.post("/api/items/", json={"list_id": lst["id"], "title": "Alpha"}).json()
+    beta = client.post("/api/items/", json={"list_id": lst["id"], "title": "Beta"}).json()
+
+    release = threading.Event()
+
+    def fake_ai(prompt, **_kw):
+        if "Alpha" in prompt:
+            release.wait(timeout=2)  # Alpha's breakdown is still running...
+            return {"subtasks": ["for alpha"]}
+        return {"subtasks": ["for beta"]}
+
+    ai_env.setattr(provider, "call_ai_json", fake_ai)
+
+    def titles(item):
+        return [s["title"] for s in client.get(f"/api/subtasks/?item_id={item['id']}").json()]
+
+    first = client.post("/api/ai/breakdown", json={"item_id": alpha["id"]}).json()
+    try:
+        # ...when Beta's is asked for: it runs on its own and finishes first.
+        second = client.post("/api/ai/breakdown", json={"item_id": beta["id"]}).json()
+        assert second["reused"] is False
+        assert second["task_id"] != first["task_id"]
+        assert _poll(client, second["task_id"])["status"] == "done"
+        assert titles(beta) == ["for beta"]
+
+        # A second request for Alpha joins the one already running.
+        again = client.post("/api/ai/breakdown", json={"item_id": alpha["id"]}).json()
+        assert again["reused"] is True
+        assert again["task_id"] == first["task_id"]
+    finally:
+        release.set()
+
+    assert _poll(client, first["task_id"])["status"] == "done"
+    assert titles(alpha) == ["for alpha"]
+    assert titles(beta) == ["for beta"]
+
+
+def test_breakdown_drops_non_string_subtasks(client, ai_env):
+    from ai import provider
+    lst = client.post("/api/lists/", json={"name": "P"}).json()
+    item = client.post("/api/items/", json={"list_id": lst["id"], "title": "T"}).json()
+
+    ai_env.setattr(provider, "call_ai_json", lambda *a, **k: {
+        "subtasks": ["Real step", {"title": "a dict"}, None, 7, "  ", " Padded step "],
+    })
+    resp = client.post("/api/ai/breakdown", json={"item_id": item["id"]})
+    done = _poll(client, resp.json()["task_id"])
+
+    subs = client.get(f"/api/subtasks/?item_id={item['id']}").json()
+    assert [s["title"] for s in subs] == ["Real step", "Padded step"]
+    assert done["result"]["subtasks"] == ["Real step", "Padded step"]
+
+
 def test_estimate_writes_range_back(client, ai_env):
     from ai import provider
     lst = client.post("/api/lists/", json={"name": "P"}).json()
@@ -242,6 +300,19 @@ def test_compile_appends_items_in_order(client, ai_env):
     assert new_titles == ["First", "Second", "Third"]
     # Appended after the existing sort_order=10
     assert all(i["sort_order"] > 10 for i in items if i["title"] != "existing")
+
+
+def test_compile_appends_after_sort_order_zero(client, ai_env):
+    from ai import provider
+    lst = client.post("/api/lists/", json={"name": "P"}).json()
+    client.post("/api/items/", json={"list_id": lst["id"], "title": "existing", "sort_order": 0})
+
+    ai_env.setattr(provider, "call_ai_json", lambda *a, **k: {"items": ["First", "Second"]})
+    resp = client.post("/api/ai/compile", json={"list_id": lst["id"], "brain_dump": "a b"})
+    _poll(client, resp.json()["task_id"])
+
+    items = client.get(f"/api/items/?list_id={lst['id']}").json()
+    assert {i["title"]: i["sort_order"] for i in items} == {"existing": 0, "First": 1, "Second": 2}
 
 
 def test_compile_rejects_unknown_list(client, ai_env):

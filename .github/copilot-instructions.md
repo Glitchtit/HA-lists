@@ -58,9 +58,9 @@ nginx waits for `/api/health` before starting (30 × 2s retry). nginx forwards `
   "timezone": "",   // optional; falls back to HA's timezone via Supervisor API
   "ai_provider": "gemini",   // gemini | claude | ollama
   "ai_gemini_api_key": "",
-  "ai_gemini_model": "gemini-2.0-flash",
+  "ai_gemini_model": "gemini-3.6-flash",
   "ai_claude_api_key": "",
-  "ai_claude_model": "claude-3-5-haiku-20241022",
+  "ai_claude_model": "claude-haiku-5-5",
   "ai_ollama_url": "",
   "ai_ollama_model": "llama3"
 }
@@ -107,7 +107,7 @@ Database at `/data/lists.db`. SQLite with WAL + foreign keys enabled.
 
 Shared helpers: `routers/_crud.py` — `apply_update()` (dynamic partial UPDATE) and `coerce_bool_cols()` (SQLite INTEGER → Python bool); `routers/_duplicate.py` — deep-duplicate for folders/lists/items; `routers/_wikilinks.py` — wikilink extraction.
 
-AI plumbing lives in `app/ai/`: `provider.py` (Gemini/Claude/Ollama calls), `prompts.py`, `jobs.py` (in-memory job registry, single-flight per kind), `storage_client.py` (options reader).
+AI plumbing lives in `app/ai/`: `provider.py` (Gemini/Claude/Ollama calls), `prompts.py`, `jobs.py` (in-memory job registry, single-flight per kind and item/list), `storage_client.py` (options reader).
 
 ## Frontend structure
 

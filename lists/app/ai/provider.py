@@ -90,9 +90,9 @@ def _call_claude(prompt: str, api_key: str, model: str) -> tuple[str, dict]:
         raise RuntimeError(
             "Claude provider selected but the 'anthropic' package is not installed"
         ) from exc
-    client = _anthropic.Anthropic(api_key=api_key)
+    client = _anthropic.Anthropic(api_key=api_key, max_retries=0)  # we retry ourselves
     response = client.messages.create(
-        model=model or "claude-3-5-haiku-20241022",
+        model=model or "claude-haiku-5-5",
         max_tokens=16000,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -113,6 +113,35 @@ def _extract_json(text: str) -> str:
     return text.strip()
 
 
+def _status(exc: Exception) -> int | None:
+    """HTTP status of a provider error: httpx carries it on .response, the
+    anthropic SDK on .status_code. None for network errors and bad JSON."""
+    status = getattr(exc, "status_code", None)
+    if status is None:
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+    return status if isinstance(status, int) else None
+
+
+def _retryable(exc: Exception) -> bool:
+    """Timeouts, connection errors, unparseable answers, rate limits and
+    server errors may pass on a second try. A missing key or URL (our own
+    RuntimeError) and any other 4xx will not."""
+    if isinstance(exc, RuntimeError):
+        return False
+    status = _status(exc)
+    return status is None or status in (408, 409, 429) or status >= 500
+
+
+def _refusal(provider: str, exc: Exception) -> str:
+    """Why a call that is not worth repeating failed, in the provider's own
+    words. Keys travel in headers, so neither the URL nor the body holds one."""
+    status = _status(exc)
+    if status is None:
+        return str(exc)
+    body = (getattr(getattr(exc, "response", None), "text", "") or "").strip()
+    return f"{provider.capitalize()} refused the request (HTTP {status}: {body[:300] or exc})"
+
+
 def call_ai_json(
     prompt: str,
     *,
@@ -122,11 +151,11 @@ def call_ai_json(
     """Call the configured AI provider and parse the response as JSON.
 
     Retries up to _MAX_RETRIES times with exponential back-off on transient
-    errors or JSON parse failures.
+    errors or JSON parse failures (see `_retryable`).
 
     Raises:
-        ValueError: if all attempts fail.
-        RuntimeError: if provider configuration is missing/invalid.
+        ValueError: at once when the provider refuses the request or is not
+            configured, otherwise once all attempts have failed.
     """
     if cfg is None:
         cfg = storage_client.get_ai_config()
@@ -163,6 +192,8 @@ def call_ai_json(
 
             return result
         except Exception as exc:
+            if not _retryable(exc):
+                raise ValueError(_refusal(provider, exc)) from exc
             last_exc = exc
             logger.warning(
                 "%s attempt %d/%d failed: %s",

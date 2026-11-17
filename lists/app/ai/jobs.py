@@ -1,7 +1,8 @@
 """HA-lists — In-memory AI job registry.
 
 Async AI operations (breakdown, compile) run on a daemon thread and write
-their status back into a single-flight-per-kind `_tasks` dict.  Clients poll
+their status back into the `_tasks` dict, single-flight per kind and input
+(one breakdown per item, one compile per list).  Clients poll
 `GET /api/ai/jobs/{task_id}` to see progress + logs + result.
 
 Capped at _MAX_TASKS with done/error entries evicted FIFO.
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 _MAX_TASKS = 20
 _tasks: dict[str, dict[str, Any]] = {}
 _tasks_lock = threading.Lock()
-_running_by_kind: dict[str, str] = {}
+_running_by_key: dict[tuple[str, str | None], str] = {}
 
 
 def _evict_if_needed() -> None:
@@ -48,7 +49,7 @@ def reset_for_tests() -> None:
     """Test-only helper — clear state between tests."""
     with _tasks_lock:
         _tasks.clear()
-        _running_by_kind.clear()
+        _running_by_key.clear()
 
 
 def start_job(
@@ -59,17 +60,19 @@ def start_job(
 ) -> tuple[str, bool]:
     """Register a new job and start it on a daemon thread.
 
-    Returns (task_id, started). If a job of the same `kind` is already running,
-    `started` is False and `task_id` is the existing one.
+    Returns (task_id, started). If a job of the same `kind` for the same
+    `input_ref` is already running, `started` is False and `task_id` is the
+    existing one. Jobs for different inputs run side by side.
     """
+    key = (kind, input_ref)
     with _tasks_lock:
-        existing = _running_by_kind.get(kind)
+        existing = _running_by_key.get(key)
         if existing is not None:
             t = _tasks.get(existing)
             if t and t.get("status") == "running":
                 return existing, False
             # Stale — clear
-            _running_by_kind.pop(kind, None)
+            _running_by_key.pop(key, None)
 
         task_id = str(uuid.uuid4())[:8]
         _tasks[task_id] = {
@@ -83,7 +86,7 @@ def start_job(
             "started_at": time.time(),
             "finished_at": None,
         }
-        _running_by_kind[kind] = task_id
+        _running_by_key[key] = task_id
         _evict_if_needed()
 
     def _run():
@@ -100,8 +103,8 @@ def start_job(
                     t["logs"].append(f"ERROR: {exc}")
         finally:
             with _tasks_lock:
-                if _running_by_kind.get(kind) == task_id:
-                    _running_by_kind.pop(kind, None)
+                if _running_by_key.get(key) == task_id:
+                    _running_by_key.pop(key, None)
 
     thread = threading.Thread(target=_run, daemon=True, name=f"ai-{kind}-{task_id}")
     thread.start()

@@ -10,8 +10,9 @@ Four features:
 
 Sync endpoints are fast single-completion calls. Async endpoints run on a
 daemon thread and are pollable via /api/ai/jobs/{id}. Single-flight is
-enforced per-kind, so a second breakdown while one is running returns the
-existing task_id instead of queueing.
+enforced per item (breakdown) and per list (compile): a second request for the
+same one while it is running returns the existing task_id instead of queueing;
+requests for different items or lists run side by side.
 """
 
 from __future__ import annotations
@@ -105,6 +106,8 @@ def start_breakdown(body: BreakdownBody):
         subtasks = result.get("subtasks") if isinstance(result, dict) else None
         if not isinstance(subtasks, list):
             raise ValueError(f"Unexpected AI response shape: {result!r}")
+        # Only real text is a subtask: str() of a dict or null is not a title.
+        subtasks = [t.strip() for t in subtasks if isinstance(t, str) and t.strip()]
 
         conn = get_connection()
         # Remove any previous AI-generated subtasks so re-running replaces them.
@@ -113,9 +116,6 @@ def start_breakdown(body: BreakdownBody):
             (body.item_id,),
         )
         for order, title in enumerate(subtasks):
-            title = str(title).strip()
-            if not title:
-                continue
             conn.execute(
                 """INSERT INTO subtasks (item_id, title, sort_order, ai_generated)
                    VALUES (?, ?, ?, 1)""",
@@ -184,7 +184,7 @@ def start_compile(body: CompileBody):
             "SELECT COALESCE(MAX(sort_order), -1) AS m FROM items WHERE list_id = ?",
             (body.list_id,),
         ).fetchone()
-        next_order = (row["m"] or -1) + 1
+        next_order = (row["m"] if row["m"] is not None else -1) + 1
 
         created: list[dict] = []
         for entry in parsed:

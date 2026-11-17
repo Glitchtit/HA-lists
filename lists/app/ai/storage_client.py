@@ -8,9 +8,9 @@ Supported keys in options.json:
 
     ai_provider          "gemini" | "claude" | "ollama"  (default: gemini)
     ai_gemini_api_key    Gemini API key
-    ai_gemini_model      e.g. "gemini-2.0-flash"
+    ai_gemini_model      e.g. "gemini-3.6-flash"
     ai_claude_api_key    Anthropic API key
-    ai_claude_model      e.g. "claude-3-5-haiku-20241022"
+    ai_claude_model      e.g. "claude-haiku-5-5"
     ai_ollama_url        Ollama base URL
     ai_ollama_model      e.g. "llama3"
 
@@ -56,9 +56,9 @@ def _normalise(opts: dict[str, Any]) -> dict[str, Any]:
     return {
         "provider": provider,
         "gemini_api_key": opts.get("ai_gemini_api_key") or "",
-        "gemini_model": opts.get("ai_gemini_model") or "gemini-2.0-flash",
+        "gemini_model": opts.get("ai_gemini_model") or "gemini-3.6-flash",
         "claude_api_key": opts.get("ai_claude_api_key") or "",
-        "claude_model": opts.get("ai_claude_model") or "claude-3-5-haiku-20241022",
+        "claude_model": opts.get("ai_claude_model") or "claude-haiku-5-5",
         "ollama_url": opts.get("ai_ollama_url") or "",
         "ollama_model": opts.get("ai_ollama_model") or "llama3",
     }

@@ -1,3 +1,12 @@
+## 1.4.16
+
+- Claude works as the AI provider. The add-on did not ship the Claude library, so every AI feature waited about 14 seconds and then failed
+- Two items can be broken down at the same time and each gets its own subtasks. Before, the second request quietly joined the first one and its item got nothing. Asking twice for the same item still runs once
+- A brain dump compiled into a list with a single item lands after that item; the first new item used to share its position
+- A breakdown step that is not plain text is skipped instead of being saved as a subtask named `{'title': …}` or `None`
+- A wrong model name, a rejected API key or a missing key fails right away with the provider's own message instead of after four tries. Rate limits, timeouts, connection problems and server errors are still retried
+- Default models are now `gemini-3.6-flash` and `claude-haiku-5-5`. A model name already saved in the add-on configuration stays as it is; change it there if it names an older model
+
 ## 1.4.15
 
 - AI features work with newer Claude models (5.x), which think before answering: the answer text is read past the thinking block, and there is more output room so thinking doesn't cut the answer short
