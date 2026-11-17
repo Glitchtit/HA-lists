@@ -2,7 +2,7 @@
 
 Async AI operations (breakdown, compile) run on a daemon thread and write
 their status back into the `_tasks` dict, single-flight per kind and input
-(one breakdown per item, one compile per list).  Clients poll
+(one breakdown per item, one compile per list and text).  Clients poll
 `GET /api/ai/jobs/{task_id}` to see progress + logs + result.
 
 Capped at _MAX_TASKS with done/error entries evicted FIFO.

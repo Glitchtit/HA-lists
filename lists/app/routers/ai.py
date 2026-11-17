@@ -10,13 +10,14 @@ Four features:
 
 Sync endpoints are fast single-completion calls. Async endpoints run on a
 daemon thread and are pollable via /api/ai/jobs/{id}. Single-flight is
-enforced per item (breakdown) and per list (compile): a second request for the
-same one while it is running returns the existing task_id instead of queueing;
-requests for different items or lists run side by side.
+enforced per item (breakdown) and per list and text (compile): a second request
+for the same one while it is running returns the existing task_id instead of
+queueing; other requests run side by side.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from typing import Any, Literal
 
@@ -208,7 +209,10 @@ def start_compile(body: CompileBody):
         jobs.append_log(task_id, f"Created {len(created)} items")
         jobs.finalize(task_id, result={"list_id": body.list_id, "items": created})
 
-    task_id, started = jobs.start_job("compile", worker, input_ref=str(body.list_id))
+    # Keyed on the text too: a different brain dump for the same list must not
+    # join a running one, or its text is never compiled.
+    dump_hash = hashlib.sha256(body.brain_dump.encode()).hexdigest()
+    task_id, started = jobs.start_job("compile", worker, input_ref=f"{body.list_id}:{dump_hash}")
     return {"task_id": task_id, "status": "running", "reused": not started}
 
 
