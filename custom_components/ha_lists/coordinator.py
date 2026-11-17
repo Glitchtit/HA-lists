@@ -3,28 +3,36 @@
 from __future__ import annotations
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+import datetime as dt
+from datetime import timedelta
 
 import httpx
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 from homeassistant.util.ssl import get_default_context
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=1)
 
 
-def _parse_due(due_at: str | None) -> datetime | None:
-    if not due_at:
+def _parse_due(value: str | None) -> dt.date | dt.datetime | None:
+    """The add-on stores due_at as an ISO date ("2026-10-20") or a local datetime ("2026-10-20T18:00")."""
+    if not value:
         return None
-    try:
-        s = due_at.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(s)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt
-    except ValueError:
+    if "T" not in value:
+        return dt_util.parse_date(value)
+    parsed = dt_util.parse_datetime(value)
+    if parsed is None:
         return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=dt_util.get_default_time_zone())
+
+
+def _is_overdue(due: dt.date | dt.datetime | None, now: dt.datetime) -> bool:
+    """A timed item is overdue once its time has passed, a date-only item from the next day."""
+    if isinstance(due, dt.datetime):
+        return due < now
+    return due is not None and due < now.date()
 
 
 class ListsCoordinator(DataUpdateCoordinator):
@@ -56,12 +64,8 @@ class ListsCoordinator(DataUpdateCoordinator):
                 lists = lists_resp.json() if lists_resp.status_code == 200 else []
                 items = items_resp.json() if items_resp.status_code == 200 else []
 
-                now = datetime.now(timezone.utc)
-                overdue = []
-                for it in items:
-                    due = _parse_due(it.get("due_at"))
-                    if due and due < now:
-                        overdue.append(it)
+                now = dt_util.now()
+                overdue = [it for it in items if _is_overdue(_parse_due(it.get("due_at")), now)]
 
                 return {
                     "health": health,

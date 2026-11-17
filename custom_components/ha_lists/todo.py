@@ -24,7 +24,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util.ssl import get_default_context
 
 from .const import DOMAIN
-from .coordinator import ListsCoordinator
+from .coordinator import ListsCoordinator, _parse_due
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
@@ -43,18 +43,6 @@ async def async_setup_entry(
         entities.append(ListsPersonTodo(coordinator, entry, person))
 
     async_add_entities(entities)
-
-
-def _parse_due(value: str | None) -> dt.date | dt.datetime | None:
-    """The add-on stores due_at as an ISO date ("2026-10-20") or datetime ("2026-10-20T18:00")."""
-    if not value:
-        return None
-    if "T" not in value:
-        return dt_util.parse_date(value)
-    parsed = dt_util.parse_datetime(value)
-    if parsed is None:
-        return None
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=dt_util.get_default_time_zone())
 
 
 def _due_to_api(due: dt.date | dt.datetime | None) -> str | None:
