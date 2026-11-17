@@ -1,3 +1,7 @@
+## 1.4.17
+
+- Integration 0.9.9: the Lists Overdue count and the Lists calendar read due times in Home Assistant's time zone, as the to-do lists already do. An item due at 18:00 is overdue from 18:00 (it was 20:00, 21:00 in summer), and an item due on a date with no time is overdue from the next day and shows as an all-day event instead of a 02:00 appointment
+
 ## 1.4.16
 
 - Claude works as the AI provider. The add-on did not ship the Claude library, so every AI feature waited about 14 seconds and then failed
