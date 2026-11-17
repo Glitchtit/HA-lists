@@ -9,6 +9,7 @@ Covers:
 - /api/ai/formalize returns rewritten text
 - /api/ai/jobs/{id} returns 404 for unknown
 - Breakdowns for different items run side by side; non-string subtasks are dropped
+- Different brain dumps into the same list run side by side
 - Storage outage → 503 degradation
 """
 
@@ -313,6 +314,44 @@ def test_compile_appends_after_sort_order_zero(client, ai_env):
 
     items = client.get(f"/api/items/?list_id={lst['id']}").json()
     assert {i["title"]: i["sort_order"] for i in items} == {"existing": 0, "First": 1, "Second": 2}
+
+
+def test_compile_of_different_dumps_into_one_list_both_run(client, ai_env):
+    import threading
+    from ai import provider
+    lst = client.post("/api/lists/", json={"name": "P"}).json()
+
+    release = threading.Event()
+
+    def fake_ai(prompt, **_kw):
+        if "buy milk" in prompt:
+            release.wait(timeout=2)  # the first brain dump is still running...
+            return {"items": ["Buy milk"]}
+        return {"items": ["Call mum"]}
+
+    ai_env.setattr(provider, "call_ai_json", fake_ai)
+
+    def compile_(dump):
+        return client.post("/api/ai/compile", json={"list_id": lst["id"], "brain_dump": dump}).json()
+
+    first = compile_("buy milk")
+    try:
+        # ...when a different one for the same list arrives: it runs on its own.
+        second = compile_("call mum")
+        assert second["reused"] is False
+        assert second["task_id"] != first["task_id"]
+        assert _poll(client, second["task_id"])["status"] == "done"
+
+        # The same dump again joins the one already running.
+        again = compile_("buy milk")
+        assert again["reused"] is True
+        assert again["task_id"] == first["task_id"]
+    finally:
+        release.set()
+
+    assert _poll(client, first["task_id"])["status"] == "done"
+    titles = {i["title"] for i in client.get(f"/api/items/?list_id={lst['id']}").json()}
+    assert titles == {"Buy milk", "Call mum"}
 
 
 def test_compile_rejects_unknown_list(client, ai_env):

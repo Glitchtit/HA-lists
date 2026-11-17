@@ -1,3 +1,7 @@
+## 1.4.18
+
+- A second brain dump into the same list, sent while the first is still being compiled, gets its own items. Before, it joined the running one and its text was never compiled. Sending the same text twice still runs once
+
 ## 1.4.17
 
 - Integration 0.9.9: the Lists Overdue count and the Lists calendar read due times in Home Assistant's time zone, as the to-do lists already do. An item due at 18:00 is overdue from 18:00 (it was 20:00, 21:00 in summer), and an item due on a date with no time is overdue from the next day and shows as an all-day event instead of a 02:00 appointment
