@@ -33,6 +33,7 @@ def _stub(name: str, **attrs) -> types.ModuleType:
 # homeassistant.core stubs
 class _SupportsResponse:
     ONLY = "only"
+    OPTIONAL = "optional"
 
 
 class _HomeAssistant:
@@ -70,6 +71,7 @@ for _mod_name, _mod in [
     ("homeassistant.helpers.service", _stub("homeassistant.helpers.service", async_get_all_descriptions=None)),
     ("homeassistant.exceptions", _stub(
         "homeassistant.exceptions",
+        HomeAssistantError=type("HomeAssistantError", (Exception,), {}),
         ServiceValidationError=type("ServiceValidationError", (Exception,), {}),
     )),
     ("homeassistant.config_entries", _stub("homeassistant.config_entries", ConfigEntry=object)),

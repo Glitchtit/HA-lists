@@ -22,7 +22,7 @@ from typing import Any, Awaitable, Callable
 import httpx
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util.ssl import get_default_context
 
@@ -169,18 +169,42 @@ def _coordinators(hass: HomeAssistant) -> list[ListsCoordinator]:
     return [v for v in hass.data.get(DOMAIN, {}).values() if isinstance(v, ListsCoordinator)]
 
 
+def _require_coordinators(hass: HomeAssistant) -> list[ListsCoordinator]:
+    """The coordinators, or an error: an empty loop must never read as done."""
+    coords = _coordinators(hass)
+    if not coords:
+        raise HomeAssistantError("Lists is not set up.")
+    return coords
+
+
+def _failure(err: Exception) -> HomeAssistantError:
+    """Only a HomeAssistantError reaches a voice assistant as text; give it the
+    add-on's own reason when there is one."""
+    detail = None
+    if isinstance(err, httpx.HTTPStatusError):
+        try:
+            detail = err.response.json().get("detail")
+        except (ValueError, AttributeError):
+            detail = None
+    return HomeAssistantError(f"Lists add-on request failed: {detail or err}")
+
+
+async def _request(coord: ListsCoordinator, method: str, path: str, **kwargs) -> Any:
+    try:
+        async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
+            resp = await client.request(method, f"{coord.addon_url}{path}", **kwargs)
+            resp.raise_for_status()
+            return resp.json()
+    except (httpx.HTTPError, OSError, ValueError) as err:
+        raise _failure(err) from err
+
+
 async def _get_json(coord: ListsCoordinator, path: str, params: dict | None = None) -> Any:
-    async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
-        resp = await client.get(f"{coord.addon_url}{path}", params=params or {})
-        resp.raise_for_status()
-        return resp.json()
+    return await _request(coord, "GET", path, params=params or {})
 
 
 async def _post_json(coord: ListsCoordinator, path: str, payload: dict) -> Any:
-    async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
-        resp = await client.post(f"{coord.addon_url}{path}", json=payload)
-        resp.raise_for_status()
-        return resp.json()
+    return await _request(coord, "POST", path, json=payload)
 
 
 async def _fetch_lists(coord: ListsCoordinator) -> list[dict]:
@@ -197,10 +221,16 @@ def async_register_services(hass: HomeAssistant) -> None:
 
     async def handle_create_list(call: ServiceCall) -> dict:
         payload = {k: v for k, v in call.data.items() if v is not None}
-        for coord in _coordinators(hass):
+        wanted = call.data["name"].strip().lower()
+        status = "created"
+        for coord in _require_coordinators(hass):
+            # "Make a groceries list" twice must not leave two lists nobody can add to by name.
+            if any(str(l.get("name", "")).strip().lower() == wanted for l in await _fetch_lists(coord)):
+                status = "already_exists"
+                continue
             await _post_json(coord, "/api/lists/", payload)
             await coord.async_request_refresh()
-        return {"status": "created", "name": call.data["name"]}
+        return {"status": status, "name": call.data["name"]}
 
     async def handle_add_item(call: ServiceCall) -> dict:
         list_name = call.data["list"]
@@ -209,7 +239,7 @@ def async_register_services(hass: HomeAssistant) -> None:
             for k, v in call.data.items()
             if k != "list" and v is not None
         }
-        for coord in _coordinators(hass):
+        for coord in _require_coordinators(hass):
             lists = await _fetch_lists(coord)
             try:
                 payload["list_id"] = resolve_list_id(list_name, lists)

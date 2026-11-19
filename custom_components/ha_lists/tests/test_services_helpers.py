@@ -143,3 +143,57 @@ async def test_poll_job_returns_last_seen_on_timeout():
         monotonic=lambda: clock["t"],
     )
     assert job["status"] == "running"  # last-seen state returned, no exception
+
+
+# ── Voice-assistant hardening ────────────────────────────────────────────────
+
+import services as _svc  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+
+
+def _handlers(monkeypatch, coords, lists=(), posts=None):
+    handlers = {}
+    hass = SimpleNamespace(services=SimpleNamespace(
+        has_service=lambda d, s: False,
+        async_register=lambda d, name, handler, **kw: handlers.__setitem__(name, handler),
+    ))
+
+    async def refresh():
+        return None
+
+    async def fetch(coord):
+        return list(lists)
+
+    async def post(coord, path, payload):
+        posts.append((path, payload))
+        return {"id": 1}
+
+    monkeypatch.setattr(_svc, "_coordinators",
+                        lambda hass: [SimpleNamespace(async_request_refresh=refresh)] * coords)
+    monkeypatch.setattr(_svc, "_fetch_lists", fetch)
+    monkeypatch.setattr(_svc, "_post_json", post)
+    _svc.async_register_services(hass)
+    return handlers
+
+
+def test_add_item_with_lists_not_set_up_is_an_error(monkeypatch):
+    handlers = _handlers(monkeypatch, coords=0)
+    with pytest.raises(_svc.HomeAssistantError, match="not set up"):
+        asyncio.run(handlers["add_item"](SimpleNamespace(data={"list": "Todo", "title": "x"})))
+
+
+def test_create_list_that_exists_makes_no_duplicate(monkeypatch):
+    posts = []
+    handlers = _handlers(monkeypatch, coords=1, lists=[{"id": 4, "name": "Groceries "}], posts=posts)
+    result = asyncio.run(handlers["create_list"](SimpleNamespace(data={"name": "groceries"})))
+    assert result["status"] == "already_exists"
+    assert posts == []
+
+
+def test_a_refusal_carries_the_add_on_reason():
+    import httpx
+
+    request = httpx.Request("POST", "http://lists/api/items/")
+    response = httpx.Response(422, json={"detail": "due_at is not a date"}, request=request)
+    err = httpx.HTTPStatusError("422", request=request, response=response)
+    assert "due_at is not a date" in str(_svc._failure(err))
